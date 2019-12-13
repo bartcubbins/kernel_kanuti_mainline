@@ -99,7 +99,7 @@ void *qcom_mdt_read_metadata(const struct firmware *fw, size_t *data_len)
 		return ERR_PTR(-EINVAL);
 
 	if (phdrs[0].p_type == PT_LOAD || phdrs[1].p_type == PT_LOAD)
-		return ERR_PTR(-EINVAL);
+		goto return_fw_copy;
 
 	if ((phdrs[1].p_flags & QCOM_MDT_TYPE_MASK) != QCOM_MDT_TYPE_HASH)
 		return ERR_PTR(-EINVAL);
@@ -122,6 +122,18 @@ void *qcom_mdt_read_metadata(const struct firmware *fw, size_t *data_len)
 
 	*data_len = ehdr_size + hash_size;
 
+	return data;
+
+return_fw_copy:
+	/*
+	 * Some older firmware (e.g. on 8974) doesn't have a hash segment
+	 * following the ELF header, just return a verbatim copy of the
+	 * fw->data and let the metadata authenticator consume what it needs.
+	 */
+	data = kmemdup(fw->data, fw->size, GFP_KERNEL);
+	if (!data)
+		return ERR_PTR(-ENOMEM);
+	*data_len = fw->size;
 	return data;
 }
 EXPORT_SYMBOL_GPL(qcom_mdt_read_metadata);
