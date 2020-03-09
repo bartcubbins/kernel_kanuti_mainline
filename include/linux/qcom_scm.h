@@ -63,9 +63,12 @@ enum qcom_scm_ice_cipher {
 
 #if IS_ENABLED(CONFIG_QCOM_SCM)
 extern bool qcom_scm_is_available(void);
+extern bool qcom_scm_mc_boot_available(void);
 
 extern int qcom_scm_set_cold_boot_addr(void *entry, const cpumask_t *cpus);
 extern int qcom_scm_set_warm_boot_addr(void *entry, const cpumask_t *cpus);
+extern int qcom_scm_set_cold_boot_addr_mc(void *entry, u32 aff0,
+					  u32 aff1, u32 aff2);
 extern void qcom_scm_cpu_power_down(u32 flags);
 extern int qcom_scm_set_remote_state(u32 state, u32 id);
 
