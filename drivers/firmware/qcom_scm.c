@@ -59,6 +59,10 @@ struct qcom_scm_mem_map_info {
 #define QCOM_SCM_FLAG_WARMBOOT_CPU2	0x10
 #define QCOM_SCM_FLAG_WARMBOOT_CPU3	0x40
 
+#define QCOM_SCM_FLAG_HLOS		0x01
+#define QCOM_SCM_FLAG_COLDBOOT_MC       0x02
+#define QCOM_SCM_FLAG_WARMBOOT_MC	0x04
+
 struct qcom_scm_wb_entry {
 	int flag;
 	void *entry;
@@ -337,6 +341,41 @@ int qcom_scm_set_cold_boot_addr(void *entry, const cpumask_t *cpus)
 	return qcom_scm_call_atomic(__scm ? __scm->dev : NULL, &desc, NULL);
 }
 EXPORT_SYMBOL(qcom_scm_set_cold_boot_addr);
+
+/**
+ * qcom_scm_set_cold_boot_addr_mc() - Set the cold boot address for cpus
+ * 				      with multi-cluster boot API.
+ * @entry: Entry point function for the cpus
+ * @aff0: Collective bitmask of the affinity-level-0 of the mpidr
+ *	  1<<aff0_CPU0| 1<<aff0_CPU1....... | 1<<aff0_CPU32
+ *	  Supports maximum 32 cpus under any affinity level.
+ * @aff1: Collective bitmask of the affinity-level-1 of the mpidr
+ * @aff2: Collective bitmask of the affinity-level-2 of the mpidr
+ *
+ * Set the cold boot address of the cpus.
+ */
+int qcom_scm_set_cold_boot_addr_mc(void *entry, u32 aff0, u32 aff1, u32 aff2)
+{
+	struct qcom_scm_desc desc = {
+		.svc = QCOM_SCM_SVC_BOOT,
+		.cmd = QCOM_SCM_BOOT_SET_ADDR_MC,
+		.arginfo = QCOM_SCM_ARGS(6),
+		.owner = ARM_SMCCC_OWNER_SIP,
+	};
+	struct qcom_scm_res res;
+	int ret;
+
+	desc.args[0] = virt_to_phys(entry);
+	desc.args[1] = aff0;
+	desc.args[2] = aff1;
+	desc.args[3] = aff2;
+	desc.args[4] = ~0ULL;
+	desc.args[5] = QCOM_SCM_FLAG_COLDBOOT_MC | QCOM_SCM_FLAG_HLOS;
+
+	ret = qcom_scm_call(NULL, &desc, &res);
+
+	return ret ? : res.result[0];
+}
 
 /**
  * qcom_scm_cpu_power_down() - Power down the cpu
@@ -1046,6 +1085,19 @@ int qcom_scm_ice_set_key(u32 index, const u8 *key, u32 key_size,
 	return ret;
 }
 EXPORT_SYMBOL(qcom_scm_ice_set_key);
+
+/*
+ * qcom_scm_mc_boot_available - Checks if secure environment supports
+ * 				multi-cluster boot API.
+ *
+ * Returns true if available and false otherwise
+ */
+bool qcom_scm_mc_boot_available(void)
+{
+	return __qcom_scm_is_call_available(NULL, QCOM_SCM_SVC_BOOT,
+					    QCOM_SCM_BOOT_SET_ADDR_MC);
+}
+EXPORT_SYMBOL(qcom_scm_mc_boot_available);
 
 /**
  * qcom_scm_hdcp_available() - Check if secure environment supports HDCP.
