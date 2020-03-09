@@ -25,3 +25,7 @@ obj-$(CONFIG_QCOM_LLCC) += llcc-qcom.o
 obj-$(CONFIG_QCOM_RPMHPD) += rpmhpd.o
 obj-$(CONFIG_QCOM_RPMPD) += rpmpd.o
 obj-$(CONFIG_QCOM_KRYO_L2_ACCESSORS) +=	kryo-l2-accessors.o
+
+# SQUARE: MSM8916/36/39 has no support of PSCI services, so
+# CPU control must be done by directly poking registers.
+obj-$(CONFIG_ARCH_QCOM) += cpu_ops.o
