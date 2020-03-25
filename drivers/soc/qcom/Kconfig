@@ -192,4 +192,12 @@ config QCOM_APR
 	  application processor and QDSP6. APR is
 	  used by audio driver to configure QDSP6
 	  ASM, ADM and AFE modules.
+
+config QCOM_CPU_OPS
+	tristate "Qualcomm CPU operations support"
+	depends on ARM64
+	default y if ARCH_QCOM
+	help
+	  Enable CPU operations support for ARM64 SoCs that have no support
+	  of PSCI services, like MSM8936/39.
 endmenu
