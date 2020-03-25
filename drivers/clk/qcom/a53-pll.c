@@ -18,6 +18,7 @@
 
 struct pll_data {
 	const struct pll_freq_tbl *table;
+	const char *clk_name;
 };
 
 static const struct pll_freq_tbl msm8916_freq[] = {
@@ -33,6 +34,7 @@ static const struct pll_freq_tbl msm8916_freq[] = {
 
 static const struct pll_data msm8916_data = {
 	.table = msm8916_freq,
+	.clk_name = "a53pll",
 };
 
 static const struct pll_freq_tbl msm8939_c0_freq[] = {
@@ -43,6 +45,7 @@ static const struct pll_freq_tbl msm8939_c0_freq[] = {
 
 static const struct pll_data msm8939_c0_data = {
 	.table = msm8939_c0_freq,
+	.clk_name = "a53pll_c0",
 };
 
 static const struct pll_freq_tbl msm8939_c1_freq[] = {
@@ -75,6 +78,7 @@ static const struct pll_freq_tbl msm8939_c1_freq[] = {
 
 static const struct pll_data msm8939_c1_data = {
 	.table = msm8939_c1_freq,
+	.clk_name = "a53pll_c1",
 };
 
 static const struct pll_freq_tbl msm8939_cci_freq[] = {
@@ -84,6 +88,7 @@ static const struct pll_freq_tbl msm8939_cci_freq[] = {
 
 static const struct pll_data msm8939_cci_data = {
 	.table = msm8939_cci_freq,
+	.clk_name = "a53pll_cci",
 };
 
 static const struct regmap_config a53pll_regmap_config = {
@@ -131,7 +136,7 @@ static int qcom_a53pll_probe(struct platform_device *pdev)
 	pll->status_bit = 16;
 	pll->freq_tbl = data->table;
 
-	init.name = "a53pll";
+	init.name = data->clk_name;
 	init.parent_names = (const char *[]){ "xo" };
 	init.num_parents = 1;
 	init.ops = &clk_pll_sr2_ops;
