@@ -88,6 +88,7 @@ static int qcom_apcs_ipc_probe(struct platform_device *pdev)
 	const struct qcom_apcs_ipc_data *apcs_data;
 	struct regmap *regmap;
 	struct resource *res;
+	static int clk_devid;
 	void __iomem *base;
 	unsigned long i;
 	int ret;
@@ -128,7 +129,7 @@ static int qcom_apcs_ipc_probe(struct platform_device *pdev)
 	if (apcs_data->clk_name) {
 		apcs->clk = platform_device_register_data(&pdev->dev,
 							  apcs_data->clk_name,
-							  PLATFORM_DEVID_NONE,
+							  clk_devid++,
 							  NULL, 0);
 		if (IS_ERR(apcs->clk))
 			dev_err(&pdev->dev, "failed to register APCS clk\n");
