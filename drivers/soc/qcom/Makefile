@@ -28,4 +28,4 @@ obj-$(CONFIG_QCOM_KRYO_L2_ACCESSORS) +=	kryo-l2-accessors.o
 
 # SQUARE: MSM8916/36/39 has no support of PSCI services, so
 # CPU control must be done by directly poking registers.
-obj-$(CONFIG_ARCH_QCOM) += cpu_ops.o
+obj-$(CONFIG_QCOM_CPU_OPS) += cpu_ops.o
