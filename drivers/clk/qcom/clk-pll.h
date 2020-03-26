@@ -40,6 +40,7 @@ struct clk_pll {
 	u32	l_reg;
 	u32	m_reg;
 	u32	n_reg;
+	u32	user_reg;
 	u32	config_reg;
 	u32	mode_reg;
 	u32	status_reg;

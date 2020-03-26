@@ -19,6 +19,7 @@
 struct pll_data {
 	const struct pll_freq_tbl *table;
 	const char *clk_name;
+	int (*init)(struct regmap *regmap, struct clk_pll *pll);
 };
 
 static const struct pll_freq_tbl msm8916_freq[] = {
@@ -43,9 +44,15 @@ static const struct pll_freq_tbl msm8939_c0_freq[] = {
 	{ 1209600000,  63, 0x0, 0x1, 0 },
 };
 
+static int msm8939_c0_init(struct regmap *regmap, struct clk_pll *pll)
+{
+	return regmap_write(regmap, pll->user_reg, 0x0100000f);
+}
+
 static const struct pll_data msm8939_c0_data = {
 	.table = msm8939_c0_freq,
 	.clk_name = "a53pll_c0",
+	.init = msm8939_c0_init,
 };
 
 static const struct pll_freq_tbl msm8939_c1_freq[] = {
@@ -130,6 +137,7 @@ static int qcom_a53pll_probe(struct platform_device *pdev)
 	pll->l_reg = 0x04;
 	pll->m_reg = 0x08;
 	pll->n_reg = 0x0c;
+	pll->user_reg = 0x10;
 	pll->config_reg = 0x14;
 	pll->mode_reg = 0x00;
 	pll->status_reg = 0x1c;
@@ -142,6 +150,14 @@ static int qcom_a53pll_probe(struct platform_device *pdev)
 	init.ops = &clk_pll_sr2_ops;
 	init.flags = CLK_IS_CRITICAL;
 	pll->clkr.hw.init = &init;
+
+	if (data->init) {
+		ret = data->init(regmap, pll);
+		if (ret) {
+			dev_err(dev, "failed to init pll: %d\n", ret);
+			return ret;
+		}
+	}
 
 	ret = devm_clk_register_regmap(dev, &pll->clkr);
 	if (ret) {
