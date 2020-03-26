@@ -16,6 +16,10 @@
 
 #include "qcom_scm.h"
 
+#ifdef CONFIG_ARM64
+#define __cpuc_flush_dcache_area __flush_dcache_area
+#endif
+
 /**
  * struct arm_smccc_args
  * @args:	The array of values used in registers in smc instruction
@@ -135,7 +139,7 @@ int scm_smc_call(struct device *dev, const struct qcom_scm_desc *desc,
 			}
 		} else {
 			args_phys = virt_to_phys(args_virt);
-			__flush_dcache_area(args_virt, alloc_len);
+			__cpuc_flush_dcache_area(args_virt, alloc_len);
 		}
 
 		smc.args[SCM_SMC_LAST_REG_IDX] = args_phys;
