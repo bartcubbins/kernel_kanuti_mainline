@@ -51,6 +51,7 @@ static int qcom_apcs_msm8916_clk_probe(struct platform_device *pdev)
 	struct regmap *regmap;
 	struct clk_init_data init = { };
 	const char *clk_name = NULL;
+	int clk_count;
 	int ret = -ENODEV;
 
 	regmap = dev_get_regmap(parent, NULL);
@@ -80,7 +81,8 @@ static int qcom_apcs_msm8916_clk_probe(struct platform_device *pdev)
 	a53cc->src_shift = 8;
 	a53cc->parent_map = map_of_parents;
 
-	a53cc->pclk = devm_clk_get(parent, NULL);
+	clk_count = of_clk_get_parent_count(parent->of_node);
+	a53cc->pclk = devm_clk_get(parent, (clk_count > 1) ? "pll" : NULL);
 	if (IS_ERR(a53cc->pclk)) {
 		ret = PTR_ERR(a53cc->pclk);
 		if (ret != -EPROBE_DEFER)
