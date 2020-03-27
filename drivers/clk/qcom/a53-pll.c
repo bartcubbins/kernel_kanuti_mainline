@@ -46,7 +46,21 @@ static const struct pll_freq_tbl msm8939_c0_freq[] = {
 
 static int msm8939_c0_init(struct regmap *regmap, struct clk_pll *pll)
 {
-	return regmap_write(regmap, pll->user_reg, 0x0100000f);
+	const struct pll_freq_tbl *tbl = &pll->freq_tbl[0];
+
+	/* Disable PLL to be safe for programming */
+	regmap_write(regmap, pll->mode_reg, 0);
+
+	/* Configure L/M/N values with the first freq_tbl entry */
+	regmap_write(regmap, pll->l_reg, tbl->l);
+	regmap_write(regmap, pll->m_reg, tbl->m);
+	regmap_write(regmap, pll->n_reg, tbl->n);
+
+	/* Configure USER_CTL and CONFIG_CTL value */
+	regmap_write(regmap, pll->user_reg, 0x0100000f);
+	regmap_write(regmap, pll->config_reg, 0x4c015765);
+
+	return 0;
 }
 
 static const struct pll_data msm8939_c0_data = {
