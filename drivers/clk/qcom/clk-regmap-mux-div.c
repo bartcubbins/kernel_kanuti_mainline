@@ -213,7 +213,8 @@ static unsigned long mux_div_recalc_rate(struct clk_hw *hw, unsigned long prate)
 			struct clk_hw *p = clk_hw_get_parent_by_index(hw, i);
 			unsigned long parent_rate = clk_hw_get_rate(p);
 
-			return mult_frac(parent_rate, 2, div + 1);
+			return div ? mult_frac(parent_rate, 2, div + 1) :
+				     parent_rate;
 		}
 
 	pr_err("%s: Can't find parent %d\n", name, src);
