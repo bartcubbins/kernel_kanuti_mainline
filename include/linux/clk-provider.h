@@ -269,11 +269,77 @@ struct clk_parent_data {
 };
 
 /**
+ * struct genpdopp_table - opp pstate and clk rate mapping table
+ *
+ * @ceiling_rate: the max clock rate this pstate support
+ * @pstate: power domain performance state
+ */
+struct genpdopp_table {
+	unsigned int	pstate;
+	unsigned long	ceiling_rate;
+};
+
+/**
+ * struct clkpstate_node - opp pstate that hold lists of clks that depends
+ *			on a specific performance state. The nodes should be
+ *			to genpd_head list from low to high pstate.
+ *
+ * @genpd_list: list node that linked to a genpd list
+ * @genpd_pstate_head: list head that lead clks that depends on this pstate
+ * @pstate: power domain performance state
+ */
+struct clkpstate_node {
+	struct list_head	genpd_list;
+	struct list_head	genpd_pstate_head;
+	unsigned int		pstate;
+};
+
+/**
+ * struct clk_power_data - holds power data that's common to all clocks and is
+ * shared between the clock provider and the common clock framework.
+ *
+ * @genpd_list: genpd consumer node of this clk, to be into one of genpd pstate
+ *		consumer lists that lead by genpd_head when clk rate is set to
+ *		a genpd opp pstate.
+ * @genpd_head: list head that holds genpd performance states heads, where
+ *		genpd performance list heads are held. Those heads are holding
+ *		genpd consumers in different opp pstate.
+ * @genpd_lock: spin_lock that protect genpd list operation
+ * @genpd_dev: device that bind the power domain where clk is on. It is clock
+ *		controller device by default, or virtual device if there are
+ *		multiple power domain for controller device
+ * @pd_opp_table: genpd opp pstate and clk rate mapping table
+ * @pd_opp_num: genpd opp pstate table entry number
+ * @genpd_pstate: current genpd opp pstate this clk requires
+ * @regulator: regulator this clk depends on
+ * @regulator_head: list head that holds regulator consumers
+ * @regulator_lock: spinlock that protect regulator list operation
+ * @regulator_list: list node to connect this clk into regulator consumer list
+ */
+struct clk_power_data {
+	struct list_head		genpd_list;
+	struct list_head		*genpd_head;
+	struct mutex			*genpd_lock;
+	struct device			**genpd_dev;
+	const struct genpdopp_table	*genpdopp_table;
+	unsigned int			genpdopp_num;
+	unsigned int			genpd_pstate;
+	struct clk_core			*core;
+	struct regulator		**regulator;
+	struct list_head		*regulator_head;
+	struct mutex			*regulator_lock;
+	struct list_head		regulator_list;
+};
+
+/**
  * struct clk_init_data - holds init data that's common to all clocks and is
  * shared between the clock provider and the common clock framework.
  *
  * @name: clock name
  * @ops: operations this clock supports
+ * power: power data that this clock operates on
+ * @power_magic: magic number to indicate that power data is valid. To sanity
+ *	check for none NULL invalid power data case.
  * @parent_names: array of string names for all possible parents
  * @parent_data: array of parent data for all possible parents (when some
  *               parents are external to the clk controller)
@@ -282,9 +348,12 @@ struct clk_parent_data {
  * @num_parents: number of possible parents
  * @flags: framework-level hints and quirks
  */
+#define CLK_POWER_MAGIC 0x5c5c6969
 struct clk_init_data {
 	const char		*name;
+	int			power_magic;
 	const struct clk_ops	*ops;
+	struct clk_power_data	*power;
 	/* Only one of the following three should be assigned */
 	const char		* const *parent_names;
 	const struct clk_parent_data	*parent_data;

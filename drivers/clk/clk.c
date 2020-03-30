@@ -18,9 +18,11 @@
 #include <linux/of.h>
 #include <linux/device.h>
 #include <linux/init.h>
+#include <linux/pm_domain.h>
 #include <linux/pm_runtime.h>
 #include <linux/sched.h>
 #include <linux/clkdev.h>
+#include <linux/regulator/consumer.h>
 
 #include "clk.h"
 
@@ -89,6 +91,7 @@ struct clk_core {
 	struct hlist_node	debug_node;
 #endif
 	struct kref		ref;
+	struct clk_power_data	*power;
 };
 
 #define CREATE_TRACE_POINTS
@@ -800,6 +803,192 @@ int clk_rate_exclusive_get(struct clk *clk)
 }
 EXPORT_SYMBOL_GPL(clk_rate_exclusive_get);
 
+static void clk_unvote_regulator(struct clk_core *core)
+{
+	struct clk_power_data *power = core->power;
+
+	mutex_lock(power->regulator_lock);
+	list_del_init(&power->regulator_list);
+
+	if (list_empty(power->regulator_head))
+		regulator_disable(*power->regulator);
+
+	mutex_unlock(power->regulator_lock);
+}
+
+static int clk_vote_regulator(struct clk_core *core)
+{
+	struct clk_power_data *power = core->power;
+	int ret = 0;
+
+	mutex_lock(power->regulator_lock);
+	if (list_empty(power->regulator_head)) {
+		ret = regulator_enable(*power->regulator);
+		if (ret) {
+			mutex_unlock(power->regulator_lock);
+			return ret;
+		}
+	}
+	list_add(&power->regulator_list, power->regulator_head);
+	mutex_unlock(power->regulator_lock);
+	return 0;
+}
+
+static void clk_unvote_genpd(struct clk_core *core)
+{
+	struct clkpstate_node *ps_node = NULL;
+	struct clk_power_data *power = core->power;
+	unsigned int pstate = 0;
+
+	mutex_lock(power->genpd_lock);
+	list_del_init(&power->genpd_list);
+	power->genpd_pstate = 0;
+
+	/* Find and set the highest pstate */
+	list_for_each_entry_reverse(ps_node, power->genpd_head, genpd_list) {
+		if (!list_empty(&ps_node->genpd_pstate_head)) {
+			pstate = ps_node->pstate;
+			break;
+		}
+	}
+
+	dev_pm_genpd_set_performance_state(*power->genpd_dev, pstate);
+
+	mutex_unlock(power->genpd_lock);
+}
+
+static int clk_vote_genpd(struct clk_core *core, unsigned long rate)
+{
+	struct clkpstate_node *new_ps_node, *ps_node, *pre_ps_node = NULL;
+	unsigned int cnt, pstate = 0;
+	struct list_head *insert_pos;
+	int ret = 0;
+	struct clk_power_data *power = core->power;
+	const struct genpdopp_table *tbl = power->genpdopp_table;
+
+	/* Find opp pstate for required rate */
+	for (cnt = 0; cnt < power->genpdopp_num; cnt++, tbl++) {
+		if (rate <= tbl->ceiling_rate) {
+			pstate = tbl->pstate;
+			break;
+		}
+	}
+
+	if (!pstate && cnt == power->genpdopp_num) {
+		pr_err("%s: clk %s rate %lu not supported by genpd\n", __func__,
+			core->name, rate);
+		return -EINVAL;
+	}
+
+	mutex_lock(power->genpd_lock);
+	if (list_empty(power->genpd_head)) {
+		insert_pos = power->genpd_head;
+		goto new_pstate_node;
+	}
+
+	/* If this clk power is already in some perf state */
+	if (!list_empty(&power->genpd_list)) {
+		if (pstate == power->genpd_pstate) {
+			mutex_unlock(power->genpd_lock);
+			return 0;
+		}
+		list_del_init(&power->genpd_list);
+	}
+
+	/* search the genpd pstate node that match pstate requirement */
+	list_for_each_entry(ps_node, power->genpd_head, genpd_list) {
+		if (ps_node->pstate == pstate) {
+			new_ps_node = ps_node;
+			list_add(&power->genpd_list,
+				 &new_ps_node->genpd_pstate_head);
+			goto link_into_pstate;
+		}
+		if (ps_node->pstate > pstate) {
+			insert_pos = &pre_ps_node->genpd_list;
+			goto new_pstate_node;
+		}
+		pre_ps_node = ps_node;
+	}
+	/* Add new genpd pstate node in the end */
+	insert_pos = &pre_ps_node->genpd_list;
+
+new_pstate_node:
+	new_ps_node = kmalloc(sizeof(struct clkpstate_node), GFP_KERNEL);
+	if (new_ps_node == NULL) {
+		mutex_unlock(power->genpd_lock);
+		return -ENOMEM;
+	}
+
+	/* link this pstate node into genpd pstate link list */
+	INIT_LIST_HEAD(&new_ps_node->genpd_list);
+	INIT_LIST_HEAD(&new_ps_node->genpd_pstate_head);
+	new_ps_node->pstate = pstate;
+	list_add(&new_ps_node->genpd_list, insert_pos);
+	list_add(&power->genpd_list, &new_ps_node->genpd_pstate_head);
+
+	/* Find and set the highest pstate */
+	list_for_each_entry_reverse(ps_node, power->genpd_head, genpd_list) {
+		if (!list_empty(&ps_node->genpd_pstate_head)) {
+			pr_info("genpd set perf state %d for clk %s\n",
+				pstate, core->name);
+			ret = dev_pm_genpd_set_performance_state(
+					*power->genpd_dev, ps_node->pstate);
+			if (ret) {
+				/* No need to free new_ps_node as it's empty */
+				mutex_unlock(power->genpd_lock);
+				pr_err("%s: fail to set genpd opp for clk %s\n",
+					__func__, core->name);
+				return ret;
+			}
+			break;
+		}
+	}
+
+link_into_pstate:
+	/* link this clk core to pstate consumer link list */
+	power->genpd_pstate = pstate;
+	mutex_unlock(power->genpd_lock);
+	return ret;
+}
+
+static void clk_unvote_power(struct clk_core *core)
+{
+	struct clk_power_data *power = core->power;
+
+	if (!core->power)
+		return;
+
+	if (power->regulator)
+		clk_unvote_regulator(core);
+
+	if (power->genpd_dev)
+		clk_unvote_genpd(core);
+}
+
+static int clk_vote_power(struct clk_core *core, unsigned long rate)
+{
+	struct clk_power_data *power = core->power;
+	int ret = 0;
+
+	if (!core->power)
+		return 0;
+
+	if (power->regulator) {
+		ret = clk_vote_regulator(core);
+		if (ret)
+			return ret;
+	}
+
+	if (power->genpd_dev) {
+		ret = clk_vote_genpd(core, rate);
+		if (ret) {
+			clk_unvote_regulator(core);
+			return ret;
+		}
+	}
+	return ret;
+}
+
 static void clk_core_unprepare(struct clk_core *core)
 {
 	lockdep_assert_held(&prepare_lock);
@@ -827,6 +1016,8 @@ static void clk_core_unprepare(struct clk_core *core)
 
 	if (core->ops->unprepare)
 		core->ops->unprepare(core->hw);
+
+	clk_unvote_power(core);
 
 	clk_pm_runtime_put(core);
 
@@ -872,6 +1063,10 @@ static int clk_core_prepare(struct clk_core *core)
 
 	if (core->prepare_count == 0) {
 		ret = clk_pm_runtime_get(core);
+		if (ret)
+			return ret;
+
+		ret = clk_vote_power(core, core->rate);
 		if (ret)
 			return ret;
 
@@ -2162,7 +2357,7 @@ static int clk_core_set_rate_nolock(struct clk_core *core,
 {
 	struct clk_core *top, *fail_clk;
 	unsigned long rate;
-	int ret = 0;
+	int ret = 0, post_set_power = 0;
 
 	if (!core)
 		return 0;
@@ -2196,10 +2391,21 @@ static int clk_core_set_rate_nolock(struct clk_core *core,
 		goto err;
 	}
 
+	if (rate > core->rate) {
+		ret = clk_vote_power(core, rate);
+		if (ret)
+			goto err;
+	} else {
+		post_set_power = 1;
+	}
+
 	/* change the rates */
 	clk_change_rate(top);
 
 	core->req_rate = req_rate;
+
+	if (post_set_power)
+		ret = clk_vote_power(core, rate);
 err:
 	clk_pm_runtime_put(core);
 
@@ -3806,6 +4012,35 @@ __clk_register(struct device *dev, struct device_node *np, struct clk_hw *hw)
 	core->max_rate = ULONG_MAX;
 	hw->core = core;
 
+	if (init->power && init->power_magic == CLK_POWER_MAGIC) {
+		struct clk_power_data *power = init->power;
+
+		power->core = core;
+		if (power->genpd_dev) {
+			if (!power->genpd_lock || !power->genpd_head ||
+			   !power->genpdopp_table || !power->genpdopp_num) {
+				pr_err("%s: invalid power domain for clk %s\n",
+					__func__, core->name);
+				goto fail_ops;
+			}
+		}
+		if (power->regulator) {
+			if (!power->regulator_head || !power->regulator_lock ||
+			   !list_empty(power->regulator_head)) {
+				pr_err("%s: invalid regulator\n", __func__);
+				goto fail_ops;
+			}
+		}
+		INIT_LIST_HEAD(&power->genpd_list);
+		INIT_LIST_HEAD(&power->regulator_list);
+		core->power = kmalloc(sizeof(*power), GFP_KERNEL);
+		if (!core->power) {
+			ret = -ENOMEM;
+			goto fail_ops;
+		}
+		memcpy(core->power, power, sizeof(*power));
+	}
+
 	ret = clk_core_populate_parent_map(core, init);
 	if (ret)
 		goto fail_parents;
@@ -3838,6 +4073,7 @@ __clk_register(struct device *dev, struct device_node *np, struct clk_hw *hw)
 fail_create_clk:
 	clk_core_free_parent_map(core);
 fail_parents:
+	kfree(core->power);
 fail_ops:
 	kfree_const(core->name);
 fail_name:
