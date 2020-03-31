@@ -3,6 +3,7 @@
  * Copyright (c) 2017, Linaro Ltd
  */
 
+#include <linux/clk.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/io.h>
@@ -22,6 +23,7 @@ struct qcom_apcs_ipc {
 	struct regmap *regmap;
 	unsigned long offset;
 	struct platform_device *clk;
+	struct clk *aux_clk;
 };
 
 struct qcom_apcs_ipc_data {
@@ -88,10 +90,15 @@ static int qcom_apcs_ipc_probe(struct platform_device *pdev)
 	const struct qcom_apcs_ipc_data *apcs_data;
 	struct regmap *regmap;
 	struct resource *res;
+	struct clk *aux_clk;
 	static int clk_devid;
 	void __iomem *base;
 	unsigned long i;
 	int ret;
+
+	aux_clk = devm_clk_get(&pdev->dev, "aux");
+	if (IS_ERR(aux_clk))
+		return PTR_ERR(aux_clk);
 
 	apcs = devm_kzalloc(&pdev->dev, sizeof(*apcs), GFP_KERNEL);
 	if (!apcs)
@@ -110,6 +117,7 @@ static int qcom_apcs_ipc_probe(struct platform_device *pdev)
 
 	apcs->regmap = regmap;
 	apcs->offset = apcs_data->offset;
+	apcs->aux_clk = aux_clk;
 
 	/* Initialize channel identifiers */
 	for (i = 0; i < ARRAY_SIZE(apcs->mbox_chans); i++)
@@ -145,6 +153,7 @@ static int qcom_apcs_ipc_remove(struct platform_device *pdev)
 	struct qcom_apcs_ipc *apcs = platform_get_drvdata(pdev);
 	struct platform_device *clk = apcs->clk;
 
+	devm_clk_put(apcs->mbox.dev, apcs->aux_clk);
 	platform_device_unregister(clk);
 
 	return 0;
