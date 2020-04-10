@@ -11,15 +11,39 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
+#include <linux/regulator/consumer.h>
 #include <linux/module.h>
+
+#include <dt-bindings/power/qcom-rpmpd.h>
 
 #include "clk-pll.h"
 #include "clk-regmap.h"
 
 struct pll_data {
 	const struct pll_freq_tbl *table;
+	const struct genpdopp_table *opp_table;
+	int opp_size;
 	const char *clk_name;
 	int (*init)(struct regmap *regmap, struct clk_pll *pll);
+};
+
+struct clk_power_head {
+	struct mutex		genpd_lock;
+	struct list_head	genpd_head;
+	struct list_head	regulator_head;
+	struct mutex		regulator_lock;
+	struct device		*genpd_dev;
+	struct regulator	*regulator_dev;
+};
+
+static const struct genpdopp_table msm8939_c0_cci_table[] = {
+	{ RPM_REGULATOR_CORNER_SVS_SOC, 1000000000 },
+	{ RPM_REGULATOR_CORNER_NORMAL, 1900000000 },
+};
+
+static const struct genpdopp_table msm8939_c1_table[] = {
+	{ RPM_REGULATOR_CORNER_SVS_SOC, 1000000000 },
+	{ RPM_REGULATOR_CORNER_NORMAL, 2000000000 },
 };
 
 static const struct pll_freq_tbl msm8916_freq[] = {
@@ -65,6 +89,8 @@ static int msm8939_c0_init(struct regmap *regmap, struct clk_pll *pll)
 
 static const struct pll_data msm8939_c0_data = {
 	.table = msm8939_c0_freq,
+	.opp_table = msm8939_c0_cci_table,
+	.opp_size = ARRAY_SIZE(msm8939_c0_cci_table),
 	.clk_name = "a53pll_c0",
 	.init = msm8939_c0_init,
 };
@@ -99,6 +125,8 @@ static const struct pll_freq_tbl msm8939_c1_freq[] = {
 
 static const struct pll_data msm8939_c1_data = {
 	.table = msm8939_c1_freq,
+	.opp_table = msm8939_c1_table,
+	.opp_size = ARRAY_SIZE(msm8939_c1_table),
 	.clk_name = "a53pll_c1",
 };
 
@@ -109,6 +137,8 @@ static const struct pll_freq_tbl msm8939_cci_freq[] = {
 
 static const struct pll_data msm8939_cci_data = {
 	.table = msm8939_cci_freq,
+	.opp_table = msm8939_c0_cci_table,
+	.opp_size = ARRAY_SIZE(msm8939_c0_cci_table),
 	.clk_name = "a53pll_cci",
 };
 
@@ -128,6 +158,7 @@ static int qcom_a53pll_probe(struct platform_device *pdev)
 	struct clk_pll *pll;
 	void __iomem *base;
 	struct clk_init_data init = { };
+	struct clk_power_data clk_power = { };
 	const struct pll_data *data;
 	int ret;
 
@@ -162,6 +193,39 @@ static int qcom_a53pll_probe(struct platform_device *pdev)
 	init.parent_names = (const char *[]){ "xo" };
 	init.num_parents = 1;
 	init.ops = &clk_pll_sr2_ops;
+
+	if (data->opp_table) {
+		struct clk_power_head *powerh;
+		struct regulator *regulator_dev;
+
+		regulator_dev = devm_regulator_get(dev, "dig");
+		if (IS_ERR(regulator_dev))
+			return PTR_ERR(regulator_dev);
+
+		powerh = devm_kzalloc(dev, sizeof(*powerh), GFP_KERNEL);
+		if (!powerh)
+			return -ENOMEM;
+
+		mutex_init(&powerh->genpd_lock);
+		INIT_LIST_HEAD(&powerh->genpd_head);
+		powerh->genpd_dev = &pdev->dev;
+
+		mutex_init(&powerh->regulator_lock);
+		INIT_LIST_HEAD(&powerh->regulator_head);
+		powerh->regulator_dev = regulator_dev;
+
+		init.power_magic = CLK_POWER_MAGIC;
+		init.power = &clk_power;
+		init.power->genpd_head = &powerh->genpd_head;
+		init.power->genpd_lock = &powerh->genpd_lock;
+		init.power->genpdopp_table = data->opp_table;
+		init.power->genpdopp_num = data->opp_size;
+		init.power->genpd_dev = &powerh->genpd_dev;
+		init.power->regulator_head = &powerh->regulator_head;
+		init.power->regulator_lock = &powerh->regulator_lock;
+		init.power->regulator = &powerh->regulator_dev;
+	}
+
 	pll->clkr.hw.init = &init;
 
 	if (data->init) {
