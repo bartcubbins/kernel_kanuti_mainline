@@ -904,7 +904,10 @@ static int clk_vote_genpd(struct clk_core *core, unsigned long rate)
 			goto link_into_pstate;
 		}
 		if (ps_node->pstate > pstate) {
-			insert_pos = &pre_ps_node->genpd_list;
+			if (pre_ps_node != NULL)
+				insert_pos = &pre_ps_node->genpd_list;
+			else
+				insert_pos = power->genpd_head;
 			goto new_pstate_node;
 		}
 		pre_ps_node = ps_node;
