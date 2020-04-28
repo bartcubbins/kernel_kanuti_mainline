@@ -114,7 +114,7 @@ static int ncp6335x_read(struct ncp6335d_info *dd, unsigned int reg,
 	rc = regmap_read(dd->regmap, reg, val);
 
 	for (i = 0; rc && i < ARRAY_SIZE(delay_array); i++) {
-		pr_warning("%s: failed reading reg=0x%x rc=%d - retry(%d)\n",
+		pr_warn("%s: failed reading reg=0x%x rc=%d - retry(%d)\n",
 			__func__, reg, rc, i);
 		msleep(delay_array[i]);
 		rc = regmap_read(dd->regmap, reg, val);
@@ -141,7 +141,7 @@ static int ncp6335x_write(struct ncp6335d_info *dd, unsigned int reg,
 
 	for (i = 0; (rc || read_rc || val != read_val)
 			&& i < ARRAY_SIZE(delay_array); i++) {
-		pr_warning("%s: failed writing reg=0x%x val=0x%x rc=%d "
+		pr_warn("%s: failed writing reg=0x%x val=0x%x rc=%d "
 			"read_rc=%d read_val=0x%x - retry(%d)\n", __func__, reg,
 			val, rc, read_rc, read_val, i);
 		msleep(delay_array[i]);
@@ -150,7 +150,7 @@ static int ncp6335x_write(struct ncp6335d_info *dd, unsigned int reg,
 	}
 
 	if (rc || read_rc || val != read_val)
-		pr_warning("%s: failed writing reg=0x%x val=0x%x rc=%d "
+		pr_warn("%s: failed writing reg=0x%x val=0x%x rc=%d "
 			"read_rc=%d read_val=0x%x\n", __func__, reg, val, rc,
 			read_rc, read_val);
 	else
@@ -172,7 +172,7 @@ static int ncp6335x_update_bits(struct ncp6335d_info *dd, unsigned int reg,
 
 	for (i = 0; (rc || read_rc || (val & mask) != (read_val & mask))
 			&& i < ARRAY_SIZE(delay_array); i++) {
-		pr_warning("%s: failed updating reg=0x%x mask=0x%x val=0x%x "
+		pr_warn("%s: failed updating reg=0x%x mask=0x%x val=0x%x "
 			"rc=%d read_rc=%d read_val=%u - retry(%d)\n", __func__,
 			reg, mask, val, rc, read_rc, read_val, i);
 		msleep(delay_array[i]);
@@ -814,6 +814,7 @@ static int ncp6335d_regulator_probe(struct i2c_client *client,
 		dd->min_slew_ns	= NCP6335D_MIN_SLEW_NS;
 		dd->max_slew_ns	= NCP6335D_MAX_SLEW_NS;
 	}
+	rdesc.uV_step = dd->step_size;
 
 	dd->regmap = devm_regmap_init_i2c(client, &ncp6335d_regmap_config);
 	if (IS_ERR(dd->regmap)) {
@@ -859,21 +860,13 @@ static int ncp6335d_regulator_probe(struct i2c_client *client,
 		dev_err(&client->dev, "Couldn't create debug dir\n");
 
 	if (dd->debug_root) {
-		struct dentry *ent;
+		debugfs_create_x32("address", S_IFREG | S_IWUSR | S_IRUGO,
+				   dd->debug_root,
+				   &(dd->peek_poke_address));
 
-		ent = debugfs_create_x32("address", S_IFREG | S_IWUSR | S_IRUGO,
-					  dd->debug_root,
-					  &(dd->peek_poke_address));
-		if (!ent)
-			dev_err(&client->dev, "Couldn't create address debug file rc = %d\n",
-									rc);
-
-		ent = debugfs_create_file("data", S_IFREG | S_IWUSR | S_IRUGO,
-					  dd->debug_root, dd,
-					  &poke_poke_debug_ops);
-		if (!ent)
-			dev_err(&client->dev, "Couldn't create data debug file rc = %d\n",
-									rc);
+		debugfs_create_file("data", S_IFREG | S_IWUSR | S_IRUGO,
+				    dd->debug_root, dd,
+				    &poke_poke_debug_ops);
 	}
 
 	return 0;
