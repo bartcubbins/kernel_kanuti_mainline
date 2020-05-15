@@ -1464,7 +1464,10 @@ static int cpufreq_online(unsigned int cpu)
 			 * mean that system will remain stable at "unknown"
 			 * frequency for longer duration. Hence, a BUG_ON().
 			 */
-			BUG_ON(ret);
+			if(ret != -EPROBE_DEFER)
+				BUG_ON(ret);
+			else if(ret)
+				dump_stack();
 			pr_warn("%s: CPU%d: Unlisted initial frequency changed to: %u KHz\n",
 				__func__, policy->cpu, policy->cur);
 		}
