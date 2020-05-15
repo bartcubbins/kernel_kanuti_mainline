@@ -1077,6 +1077,19 @@ static struct opp_table *_allocate_opp_table(struct device *dev, int index)
 	/* Mark regulator count uninitialized */
 	opp_table->regulator_count = -1;
 
+	/* Find clk for the device */
+	opp_table->clk = clk_get(dev, NULL);
+	if (IS_ERR(opp_table->clk)) {
+		ret = PTR_ERR(opp_table->clk);
+		if (ret != -EPROBE_DEFER) {
+			dev_dbg(dev, "%s: Couldn't find clock: %d\n", __func__,
+				ret);
+		} else {
+			kfree(opp_table);
+			return ERR_PTR(ret);
+		}
+	}
+
 	opp_dev = _add_opp_dev(dev, opp_table);
 	if (!opp_dev) {
 		kfree(opp_table);
@@ -1084,15 +1097,6 @@ static struct opp_table *_allocate_opp_table(struct device *dev, int index)
 	}
 
 	_of_init_opp_table(opp_table, dev, index);
-
-	/* Find clk for the device */
-	opp_table->clk = clk_get(dev, NULL);
-	if (IS_ERR(opp_table->clk)) {
-		ret = PTR_ERR(opp_table->clk);
-		if (ret != -EPROBE_DEFER)
-			dev_dbg(dev, "%s: Couldn't find clock: %d\n", __func__,
-				ret);
-	}
 
 	/* Find interconnect path(s) for the device */
 	ret = dev_pm_opp_of_find_icc_paths(dev, opp_table);
@@ -1994,6 +1998,8 @@ struct opp_table *dev_pm_opp_attach_genpd(struct device *dev,
 	opp_table = dev_pm_opp_get_opp_table(dev);
 	if (!opp_table)
 		return ERR_PTR(-ENOMEM);
+	if (-EPROBE_DEFER == PTR_ERR(opp_table))
+		return opp_table;
 
 	/*
 	 * If the genpd's OPP table isn't already initialized, parsing of the
