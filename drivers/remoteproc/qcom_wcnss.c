@@ -151,6 +151,22 @@ static const struct wcnss_data pronto_v2_data = {
 	.num_vregs = 3,
 };
 
+static const struct wcnss_data pronto_v2_pd_data = {
+	.pmu_offset = 0x1004,
+	.spare_offset = 0x1088,
+
+	.vregs = (struct wcnss_vreg_info[]) {
+		{ "vddpx", 1800000, 1800000, 0 },
+	},
+	.num_vregs = 1,
+
+	.pd_info = (struct wcnss_pd_info[]) {
+		{ "vddmx", 1, 6},
+		{ "vddcx", 1, 6},
+	},
+	.num_pds = 2,
+};
+
 void qcom_wcnss_assign_iris(struct qcom_wcnss *wcnss,
 			    struct qcom_iris *iris,
 			    bool use_48mhz_xo)
@@ -723,6 +739,7 @@ static const struct of_device_id wcnss_of_match[] = {
 	{ .compatible = "qcom,riva-pil", &riva_data },
 	{ .compatible = "qcom,pronto-v1-pil", &pronto_v1_data },
 	{ .compatible = "qcom,pronto-v2-pil", &pronto_v2_data },
+	{ .compatible = "qcom,pronto-v2-pd-pil", &pronto_v2_pd_data },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, wcnss_of_match);
