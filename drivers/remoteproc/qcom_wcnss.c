@@ -24,6 +24,8 @@
 #include <linux/soc/qcom/smem.h>
 #include <linux/soc/qcom/smem_state.h>
 #include <linux/rpmsg/qcom_smd.h>
+#include <linux/pm_domain.h>
+#include <linux/pm_runtime.h>
 
 #include "qcom_common.h"
 #include "remoteproc_internal.h"
@@ -51,12 +53,27 @@
 #define WCNSS_PMU_XO_MODE_19p2		0
 #define WCNSS_PMU_XO_MODE_48		3
 
+struct wcnss_pd_info {
+	char *name;
+	int perf_min;
+	int perf_max;
+};
+
 struct wcnss_data {
 	size_t pmu_offset;
 	size_t spare_offset;
 
 	const struct wcnss_vreg_info *vregs;
 	size_t num_vregs;
+
+	struct wcnss_pd_info *pd_info;
+	size_t num_pds;
+};
+
+struct wcnss_pd_data {
+	struct device *dev;
+	int perf_min;
+	int perf_max;
 };
 
 struct qcom_wcnss {
@@ -82,6 +99,9 @@ struct qcom_wcnss {
 
 	struct regulator_bulk_data *vregs;
 	size_t num_vregs;
+
+	struct wcnss_pd_data *pds;
+	size_t pd_count;
 
 	struct completion start_done;
 	struct completion stop_done;
@@ -216,6 +236,46 @@ static void wcnss_configure_iris(struct qcom_wcnss *wcnss)
 	msleep(20);
 }
 
+static int wcnss_enable_pds(struct qcom_wcnss *wcnss)
+{
+	struct wcnss_pd_data *pd;
+	int ret;
+	int i;
+
+	for (i = 0; i < wcnss->pd_count; i++) {
+		pd = &wcnss->pds[i];
+		dev_pm_genpd_set_performance_state(pd->dev, pd->perf_max);
+		ret = pm_runtime_get_sync(pd->dev);
+		if (ret < 0) {
+			dev_err(wcnss->dev, "pm_runtime_get_sync() %d\n", ret);
+			goto unroll_pd_votes;
+		}
+	}
+
+	return 0;
+
+unroll_pd_votes:
+	for (i--; i >= 0; i--) {
+		pd = &wcnss->pds[i];
+		dev_pm_genpd_set_performance_state(pd->dev, pd->perf_min);
+		pm_runtime_put(pd->dev);
+	}
+
+	return ret;
+}
+
+static void wcnss_disable_pds(struct qcom_wcnss *wcnss)
+{
+	struct wcnss_pd_data *pd;
+	int i;
+
+	for (i = 0; i < wcnss->pd_count; i++) {
+		pd = &wcnss->pds[i];
+		dev_pm_genpd_set_performance_state(pd->dev, pd->perf_min);
+		pm_runtime_put(pd->dev);
+	}
+}
+
 static int wcnss_start(struct rproc *rproc)
 {
 	struct qcom_wcnss *wcnss = (struct qcom_wcnss *)rproc->priv;
@@ -228,9 +288,17 @@ static int wcnss_start(struct rproc *rproc)
 		goto release_iris_lock;
 	}
 
-	ret = regulator_bulk_enable(wcnss->num_vregs, wcnss->vregs);
-	if (ret)
+	ret = wcnss_enable_pds(wcnss);
+	if (ret) {
+		dev_err(wcnss->dev, "wcnss_enable_pds fail %d\n", ret);
 		goto release_iris_lock;
+	}
+
+	ret = regulator_bulk_enable(wcnss->num_vregs, wcnss->vregs);
+	if (ret) {
+		dev_err(wcnss->dev, "regulator_bulk_enable fail %d\n", ret);
+		goto disable_pds;
+	}
 
 	ret = qcom_iris_enable(wcnss->iris);
 	if (ret)
@@ -262,6 +330,8 @@ disable_iris:
 	qcom_iris_disable(wcnss->iris);
 disable_regulators:
 	regulator_bulk_disable(wcnss->num_vregs, wcnss->vregs);
+disable_pds:
+	wcnss_disable_pds(wcnss);
 release_iris_lock:
 	mutex_unlock(&wcnss->iris_lock);
 
@@ -408,6 +478,55 @@ static int wcnss_init_regulators(struct qcom_wcnss *wcnss,
 	return 0;
 }
 
+static int wcnss_attach_pds(struct qcom_wcnss *wcnss,
+			    struct wcnss_pd_info *pd_info, int num_pds)
+{
+	struct wcnss_pd_data *pd;
+	struct device *dev = wcnss->dev;
+	int i;
+	int ret;
+
+	if (!num_pds)
+		return 0;
+
+	wcnss->pds = devm_kcalloc(wcnss->dev, num_pds,
+				  sizeof(struct wcnss_pd_data *), GFP_KERNEL);
+	if (!wcnss->pds)
+		return -ENOMEM;
+
+	for (i = 0; i < num_pds; i++) {
+		pd = &wcnss->pds[i];
+		pd->dev = dev_pm_domain_attach_by_name(dev, pd_info[i].name);
+		if (IS_ERR_OR_NULL(pd->dev)) {
+			dev_err(dev, "unable to attach power domain %s\n",
+				pd_info[i].name);
+			ret = PTR_ERR(pd->dev) ? : -ENODATA;
+			goto unroll_attach;
+		}
+	}
+
+	return num_pds;
+
+unroll_attach:
+	for (i--; i >= 0; i--) {
+		pd = &wcnss->pds[i];
+		dev_pm_domain_detach(pd->dev, false);
+	}
+
+	return ret;
+}
+
+static void wcnss_detach_pds(struct qcom_wcnss *wcnss)
+{
+	struct wcnss_pd_data *pd;
+	int i;
+
+	for (i = 0; i < wcnss->pd_count; i++) {
+		pd = &wcnss->pds[i];
+		dev_pm_domain_detach(pd->dev, false);
+	}
+}
+
 static int wcnss_request_irq(struct qcom_wcnss *wcnss,
 			     struct platform_device *pdev,
 			     const char *name,
@@ -515,32 +634,41 @@ static int wcnss_probe(struct platform_device *pdev)
 	wcnss->spare_out = mmio + data->spare_offset;
 
 	ret = wcnss_init_regulators(wcnss, data->vregs, data->num_vregs);
-	if (ret)
+	if (ret) {
+		dev_err(wcnss->dev, "init regulators fail %d\n", ret);
 		goto free_rproc;
+	}
+
+	ret = wcnss_attach_pds(wcnss, data->pd_info, data->num_pds);
+	if (ret < 0) {
+		dev_err(wcnss->dev, "attaching power-domains failed %d\n", ret);
+		goto free_rproc;
+	}
+	wcnss->pd_count = ret;
 
 	ret = wcnss_request_irq(wcnss, pdev, "wdog", false, wcnss_wdog_interrupt);
 	if (ret < 0)
-		goto free_rproc;
+		goto detach_pds;
 	wcnss->wdog_irq = ret;
 
 	ret = wcnss_request_irq(wcnss, pdev, "fatal", false, wcnss_fatal_interrupt);
 	if (ret < 0)
-		goto free_rproc;
+		goto detach_pds;
 	wcnss->fatal_irq = ret;
 
 	ret = wcnss_request_irq(wcnss, pdev, "ready", true, wcnss_ready_interrupt);
 	if (ret < 0)
-		goto free_rproc;
+		goto detach_pds;
 	wcnss->ready_irq = ret;
 
 	ret = wcnss_request_irq(wcnss, pdev, "handover", true, wcnss_handover_interrupt);
 	if (ret < 0)
-		goto free_rproc;
+		goto detach_pds;
 	wcnss->handover_irq = ret;
 
 	ret = wcnss_request_irq(wcnss, pdev, "stop-ack", true, wcnss_stop_ack_interrupt);
 	if (ret < 0)
-		goto free_rproc;
+		goto detach_pds;
 	wcnss->stop_ack_irq = ret;
 
 	if (wcnss->stop_ack_irq) {
@@ -548,7 +676,7 @@ static int wcnss_probe(struct platform_device *pdev)
 						   &wcnss->stop_bit);
 		if (IS_ERR(wcnss->state)) {
 			ret = PTR_ERR(wcnss->state);
-			goto free_rproc;
+			goto detach_pds;
 		}
 	}
 
@@ -556,14 +684,17 @@ static int wcnss_probe(struct platform_device *pdev)
 	wcnss->sysmon = qcom_add_sysmon_subdev(rproc, "wcnss", WCNSS_SSCTL_ID);
 	if (IS_ERR(wcnss->sysmon)) {
 		ret = PTR_ERR(wcnss->sysmon);
-		goto free_rproc;
+		goto detach_pds;
 	}
 
 	ret = rproc_add(rproc);
 	if (ret)
-		goto free_rproc;
+		goto detach_pds;
 
 	return of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
+
+detach_pds:
+	wcnss_detach_pds(wcnss);
 
 free_rproc:
 	rproc_free(rproc);
@@ -578,6 +709,7 @@ static int wcnss_remove(struct platform_device *pdev)
 	of_platform_depopulate(&pdev->dev);
 
 	qcom_smem_state_put(wcnss->state);
+	wcnss_detach_pds(wcnss);
 	rproc_del(wcnss->rproc);
 
 	qcom_remove_sysmon_subdev(wcnss->sysmon);
