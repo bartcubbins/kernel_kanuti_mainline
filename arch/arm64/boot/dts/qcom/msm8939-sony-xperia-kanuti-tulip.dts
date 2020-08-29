@@ -1,0 +1,440 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Sony Xperia M4 Aqua device tree source
+ *
+ * Copyright (c) 2020, Pavel Dubrova <pashadubrova@gmail.com>
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/leds/common.h>
+#include "msm8939.dtsi"
+#include "pm8916.dtsi"
+
+/ {
+	model = "Sony Xperia M4 Aqua";
+	compatible = "sony,kanuti-tulip", "qcom,msm8939";
+
+	/* Required by bootloader to select correct DTB */
+	qcom,msm-id = <239 0>;
+	qcom,board-id = <8 0>;
+
+	aliases {
+		serial0 = &blsp1_uart2;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&gpio_key_default>;
+
+		camera_focus {
+			label = "camera_focus";
+			gpios = <&tlmm 108 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <KEY_CAMERA_FOCUS>;
+			wakeup-source;
+			debounce-interval = <100>;
+		};
+
+		camera_snapshot {
+			label = "camera_snapshot";
+			gpios = <&tlmm 109 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <0x2fe>;
+			wakeup-source;
+			debounce-interval = <100>;
+		};
+
+		vol_down {
+			label = "volume_down";
+			gpios = <&tlmm 51 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <KEY_VOLUMEDOWN>;
+			wakeup-source;
+			debounce-interval = <100>;
+		};
+
+		vol_up {
+			label = "volume_up";
+			gpios = <&tlmm 11 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <KEY_VOLUMEUP>;
+			wakeup-source;
+			debounce-interval = <100>;
+		};
+	};
+
+	reserved-memory {
+		ramoops@a0000000 {
+			compatible = "ramoops";
+			reg = <0x0 0xa0000000 0x0 0x100000>;
+
+			record-size = <0x20000>;
+			console-size = <0x40000>;
+			ftrace-size = <0x20000>;
+			pmsg-size = <0x20000>;
+			ecc-size = <16>;
+		};
+	};
+
+	usb_id: usb-id {
+		compatible = "linux,extcon-usb-gpio";
+
+		id-gpio = <&tlmm 110 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&usb_id_default>;
+	};
+};
+
+&apps_iommu {
+	power-domains = <&gcc MDSS_GDSC>;
+};
+
+&blsp1_dma {
+	status = "okay";
+};
+
+&blsp1_i2c0 {
+	clock-frequency = <400000>;
+	status = "okay";
+
+	bmc150-accelerometer@10 {
+		compatible = "bosch,bmc150_accel";
+		reg = <0x10>;
+
+		interrupts = <69 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-parent = <&tlmm>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&bma2x2_default>;
+
+		mount-matrix = "1", "0", "0",
+			       "0", "-1", "0",
+			       "0", "0", "-1";
+	};
+
+	bmc150-magnetometer@12 {
+		compatible = "bosch,bmc150_magn";
+		reg = <0x12>;
+	};
+
+	led-controller@30 {
+		compatible = "ti,lp5562";
+		reg = <0x30>;
+		clock-mode = /bits/ 8 <2>;
+		enable-gpio = <&tlmm 32 GPIO_ACTIVE_HIGH>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		chan@0 {
+			reg = <0>;
+			chan-name = "red";
+			led-cur = /bits/ 8 <0x20>;
+			max-cur = /bits/ 8 <0x60>;
+			color = <LED_COLOR_ID_RED>;
+		};
+
+		chan@1 {
+			reg = <1>;
+			chan-name = "green";
+			led-cur = /bits/ 8 <0x20>;
+			max-cur = /bits/ 8 <0x60>;
+			color = <LED_COLOR_ID_GREEN>;
+		};
+
+		chan@2 {
+			reg = <2>;
+			chan-name = "blue";
+			led-cur = /bits/ 8 <0x20>;
+			max-cur = /bits/ 8 <0x60>;
+			color = <LED_COLOR_ID_BLUE>;
+		};
+
+		chan@3 {
+			reg = <3>;
+			chan-name = "white";
+			led-cur = /bits/ 8 <0x20>;
+			max-cur = /bits/ 8 <0x60>;
+			color = <LED_COLOR_ID_WHITE>;
+		};
+	};
+
+	/* TODO: Capella CM36286 on 0x60 */
+};
+
+&blsp1_i2c4 {
+	clock-frequency = <400000>;
+
+	/* TODO: SMB1360 on 0x14 */
+};
+
+&blsp1_i2c5 {
+	clock-frequency = <400000>;
+
+	/* TODO: CYTTSP4 on 0x24 */
+
+	/* TODO: Some devices have CYTTSP5 on 0x34 instead of CYTTSP4 */
+};
+
+&blsp1_i2c6 {
+	clock-frequency = <400000>;
+	status = "okay";
+
+	nfc@28 {
+		compatible = "nxp,pn544-i2c";
+		reg = <0x28>;
+		clock-frequency = <100000>;
+
+		interrupt-parent = <&tlmm>;
+		interrupts = <21 IRQ_TYPE_EDGE_FALLING>;
+
+		enable-gpios = <&tlmm 20 GPIO_ACTIVE_HIGH>;
+		firmware-gpios = <&tlmm 120 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&dsi0 {
+	vdda-supply = <&pm8916_l2>;
+	vddio-supply = <&pm8916_l6>;
+
+	panel@0 {
+		compatible = "truly,nt35521";
+		reg = <0>;
+
+		reset-gpios = <&tlmm 25 GPIO_ACTIVE_HIGH>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+
+				panel_in: endpoint {
+					remote-endpoint = <&dsi0_out>;
+				};
+			};
+		};
+	};
+};
+
+&dsi_phy0 {
+	vddio-supply = <&pm8916_l6>;
+};
+
+&dsi0_out {
+	remote-endpoint = <&panel_in>;
+	data-lanes = <0 1 2 3>;
+};
+
+&otg {
+	dr_mode = "peripheral";
+	extcon = <&usb_id>, <&usb_id>;
+
+	status = "okay";
+};
+
+&pm8916_vib {
+	status = "okay";
+};
+
+&pronto {
+	status = "okay";
+
+	smd-edge {
+		wcnss {
+			bt {
+				/* Device specific. This is my REAL BT MAC address. */
+				local-bd-address = [ 40 40 a7 85 14 63 ];
+			};
+
+			wifi {
+				/* Device specific. This is my REAL WLAN MAC address. */
+				local-mac-address = [ 40 40 a7 5e ac 9e ];
+			};
+		};
+	};
+};
+
+&rpm_requests {
+	pm8916-regulators {
+		compatible = "qcom,rpm-pm8916-regulators";
+
+		vdd_l1_l2_l3-supply = <&pm8916_s3>;
+		vdd_l4_l5_l6-supply = <&pm8916_s4>;
+		vdd_l7-supply = <&pm8916_s4>;
+
+		pm8916_s1: s1 {
+			regulator-min-microvolt = <500000>;
+			regulator-max-microvolt = <1300000>;
+		};
+
+		pm8916_s3: s3 {
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1300000>;
+		};
+
+		pm8916_s4: s4 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <2100000>;
+		};
+
+		pm8916_l1: l1 {
+			regulator-min-microvolt = <1225000>;
+			regulator-max-microvolt = <1300000>;
+		};
+
+		pm8916_l2: l2 {
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+		};
+
+		pm8916_l3: l3 {
+			regulator-min-microvolt = <500000>;
+			regulator-max-microvolt = <1287500>;
+		};
+
+		pm8916_l4: l4 {
+			regulator-min-microvolt = <2050000>;
+			regulator-max-microvolt = <2050000>;
+		};
+
+		pm8916_l5: l5 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+		};
+
+		pm8916_l6: l6 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+		};
+
+		pm8916_l7: l7 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+		};
+
+		pm8916_l8: l8 {
+			regulator-min-microvolt = <2850000>;
+			regulator-max-microvolt = <2900000>;
+		};
+
+		pm8916_l9: l9 {
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		pm8916_l10: l10 {
+			regulator-min-microvolt = <2700000>;
+			regulator-max-microvolt = <2800000>;
+		};
+
+		pm8916_l11: l11 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <2950000>;
+		};
+
+		pm8916_l12: l12 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <2950000>;
+		};
+
+		pm8916_l13: l13 {
+			regulator-min-microvolt = <3075000>;
+			regulator-max-microvolt = <3075000>;
+		};
+
+		pm8916_l14: l14 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		pm8916_l15: l15 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		pm8916_l16: l16 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		pm8916_l17: l17 {
+			regulator-min-microvolt = <2850000>;
+			regulator-max-microvolt = <2850000>;
+		};
+
+		pm8916_l18: l18 {
+			regulator-min-microvolt = <2700000>;
+			regulator-max-microvolt = <2850000>;
+		};
+	};
+};
+
+&sdhc_1 {
+	vmmc-supply = <&pm8916_l8>;
+	vqmmc-supply = <&pm8916_l5>;
+
+	status = "okay";
+};
+
+&sdhc_2 {
+	vmmc-supply = <&pm8916_l11>;
+	vqmmc-supply = <&pm8916_l12>;
+
+	cd-gpios = <&tlmm 38 GPIO_ACTIVE_HIGH>;
+
+	status = "okay";
+};
+
+&tlmm {
+	bma2x2_default: bma2x2-default {
+		pins = "gpio69";
+		function = "gpio";
+
+		drive-strength = <2>;
+		bias-disable;
+	};
+
+	gpio_key_default: gpio-key-default {
+		pins = "gpio11", "gpio51", "gpio108", "gpio109";
+		function = "gpio";
+
+		drive-strength = <2>;
+		bias-pull-up;
+	};
+
+	mdss_dsi_default: mdss-dsi-default {
+		pins = "gpio25", "gpio97", "gpio98";
+		function = "gpio";
+
+		drive-strength = <8>;
+		bias-disable;
+	};
+
+	mdss_dsi_sleep: mdss-dsi-sleep {
+		pins = "gpio25", "gpio97", "gpio98";
+		function = "gpio";
+
+		drive-strength = <2>;
+		bias-pull-down;
+	};
+
+	smb_int_default: smb-int-default {
+		pins = "gpio62";
+		function = "gpio";
+
+		drive-strength = <2>;
+		bias-pull-up;
+	};
+};
+
+&usb_hs_phy {
+	v1p8-supply = <&pm8916_l7>;
+	v3p3-supply = <&pm8916_l13>;
+
+	extcon = <&usb_id>;
+};
