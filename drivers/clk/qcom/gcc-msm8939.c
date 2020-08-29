@@ -1088,6 +1088,7 @@ static struct clk_rcg2 blsp1_uart2_apps_clk_src = {
 
 static const struct freq_tbl ftbl_gcc_camss_cci_clk[] = {
 	F(19200000,	P_XO, 1, 0,	0),
+	F(37500000,	P_GPLL0, 1, 3,	64),
 	{ }
 };
 
@@ -1265,6 +1266,9 @@ static struct clk_rcg2 csi1phytimer_clk_src = {
 
 static const struct freq_tbl ftbl_gcc_camss_cpp_clk[] = {
 	F(160000000, P_GPLL0, 5, 0, 0),
+	F(200000000, P_GPLL0, 4, 0, 0),
+	F(228570000, P_GPLL0, 3.5, 0, 0),
+	F(266670000, P_GPLL0, 3, 0, 0),
 	F(320000000, P_GPLL0, 2.5, 0, 0),
 	F(465000000, P_GPLL2, 2, 0, 0),
 	{ }
@@ -1416,7 +1420,7 @@ static const struct genpdopp_table esc_genpdopp[] = {
 };
 
 static struct clk_rcg2 esc0_clk_src = {
-	.cmd_rcgr = 0x4d060,
+	.cmd_rcgr = 0x4d05c,
 	.hid_width = 5,
 	.parent_map = gcc_xo_dsibyte_map,
 	.freq_tbl = ftbl_gcc_mdss_esc_clk,
@@ -1447,6 +1451,8 @@ static const struct freq_tbl ftbl_gcc_mdss_mdp_clk[] = {
 	F(50000000, P_GPLL0_AUX, 16, 0, 0),
 	F(80000000, P_GPLL0_AUX, 10, 0, 0),
 	F(100000000, P_GPLL0_AUX, 8, 0, 0),
+	F(145500000, P_GPLL0_AUX, 5.5, 0, 0),
+	F(153600000, P_GPLL1, 4, 0, 0),
 	F(160000000, P_GPLL0_AUX, 5, 0, 0),
 	F(177780000, P_GPLL0_AUX, 4.5, 0, 0),
 	F(200000000, P_GPLL0_AUX, 4, 0, 0),
@@ -1650,7 +1656,9 @@ static struct clk_rcg2 bimc_gpu_clk_src = {
 };
 
 static const struct freq_tbl ftbl_gcc_usb_hs_system_clk[] = {
+	F(57140000, P_GPLL0, 14, 0, 0),
 	F(80000000, P_GPLL0, 10, 0, 0),
+	F(100000000, P_GPLL0, 8, 0, 0),
 	{ }
 };
 
@@ -1880,7 +1888,7 @@ static struct clk_rcg2 ultaudio_lpaif_aux_i2s_clk_src = {
 	.freq_tbl = ftbl_gcc_ultaudio_lpaif_i2s_clk,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "ultaudio_lpaif_aux_i2s_clk_src",
-		.parent_data = gcc_xo_gpll1_esi2s_emclk_sleep_parent_data,
+		.parent_data = gcc_xo_gpll1_emclk_sleep_parent_data,
 		.num_parents = 5,
 		.ops = &clk_rcg2_ops,
 	},
@@ -2027,9 +2035,9 @@ static struct clk_branch gcc_ultaudio_pcnoc_sway_clk = {
 };
 
 static const struct freq_tbl ftbl_gcc_venus0_vcodec0_clk[] = {
-	F(100000000, P_GPLL0, 8, 0, 0),
-	F(160000000, P_GPLL0, 5, 0, 0),
-	F(228570000, P_GPLL0, 3.5, 0, 0),
+	F(133330000, P_GPLL0, 6, 0, 0),
+	F(200000000, P_GPLL0, 4, 0, 0),
+	F(266670000, P_GPLL0, 3, 0, 0),
 	{ }
 };
 
@@ -2071,6 +2079,11 @@ static struct clk_branch gcc_blsp1_sleep_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data){
 			.name = "gcc_blsp1_sleep_clk",
+			.parent_data = &(const struct clk_parent_data) {	
+				.fw_name = "sleep_clk",
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -3573,6 +3586,11 @@ static struct clk_branch gcc_usb2a_phy_sleep_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data){
 			.name = "gcc_usb2a_phy_sleep_clk",
+			.parent_data = &(const struct clk_parent_data) {
+				.fw_name = "sleep_clk",
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
