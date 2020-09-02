@@ -40,6 +40,108 @@
 		};
 	};
 
+	cluster0_opp_table: cluster0-opp-table {
+		compatible = "operating-points-v2-kryo-cpu";
+		opp-shared;
+
+		opp-200000000 {
+			opp-hz = /bits/ 64 <200000000>;
+			required-opps = <&cpr_opp1>;
+		};
+
+		opp-249600000 {
+			opp-hz = /bits/ 64 <249600000>;
+			required-opps = <&cpr_opp1>;
+		};
+
+		opp-499200000 {
+			opp-hz = /bits/ 64 <499200000>;
+			required-opps = <&cpr_opp2>;
+		};
+
+		opp-800000000 {
+			opp-hz = /bits/ 64 <800000000>;
+			required-opps = <&cpr_opp2>;
+		};
+
+		opp-998400000 {
+			opp-hz = /bits/ 64 <998400000>;
+			required-opps = <&cpr_opp3>;
+		};
+
+		opp-1113600000 {
+			opp-hz = /bits/ 64 <1113600000>;
+			required-opps = <&cpr_opp3>;
+		};
+	};
+
+	cluster1_opp_table: cluster1-opp-table {
+		compatible = "operating-points-v2-kryo-cpu";
+		opp-shared;
+
+		opp-200000000 {
+			opp-hz = /bits/ 64 <200000000>;
+			required-opps = <&cpr_opp1>;
+		};
+
+		opp-345600000 {
+			opp-hz = /bits/ 64 <345600000>;
+			required-opps = <&cpr_opp1>;
+		};
+
+		opp-400000000 {
+			opp-hz = /bits/ 64 <400000000>;
+			required-opps = <&cpr_opp1>;
+		};
+
+		opp-533330000 {
+			opp-hz = /bits/ 64 <533330000>;
+			required-opps = <&cpr_opp2>;
+		};
+
+		opp-800000000 {
+			opp-hz = /bits/ 64 <800000000>;
+			required-opps = <&cpr_opp2>;
+		};
+
+		opp-960000000 {
+			opp-hz = /bits/ 64 <960000000>;
+			required-opps = <&cpr_opp2>;
+		};
+
+		opp-1113600000 {
+			opp-hz = /bits/ 64 <1113600000>;
+			required-opps = <&cpr_opp2>;
+		};
+
+		opp-1344000000 {
+			opp-hz = /bits/ 64 <1344000000>;
+			required-opps = <&cpr_opp3>;
+		};
+
+		opp-1459200000 {
+			opp-hz = /bits/ 64 <1459200000>;
+			required-opps = <&cpr_opp3>;
+		};
+	};
+
+	cpr_opp_table: cpr-opp-table {
+		compatible = "operating-points-v2-qcom-level";
+
+		cpr_opp1: opp1 {
+			opp-level = <1>;
+			qcom,opp-fuse-level = <1>;
+		};
+		cpr_opp2: opp2 {
+			opp-level = <2>;
+			qcom,opp-fuse-level = <2>;
+		};
+		cpr_opp3: opp3 {
+			opp-level = <3>;
+			qcom,opp-fuse-level = <3>;
+		};
+	};
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -51,6 +153,10 @@
 			next-level-cache = <&L2_1>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc0>;
+			clocks = <&apcs1_mbox>;
+			operating-points-v2 = <&cluster1_opp_table>;
+			power-domains = <&cpr>;
+			power-domain-names = "cpr";
 			#cooling-cells = <2>;
 			L2_1: l2-cache {
 				compatible = "cache";
@@ -66,6 +172,10 @@
 			next-level-cache = <&L2_1>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc1>;
+			clocks = <&apcs1_mbox>;
+			operating-points-v2 = <&cluster1_opp_table>;
+			power-domains = <&cpr>;
+			power-domain-names = "cpr";
 			#cooling-cells = <2>;
 		};
 
@@ -76,6 +186,10 @@
 			next-level-cache = <&L2_1>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc2>;
+			clocks = <&apcs1_mbox>;
+			operating-points-v2 = <&cluster1_opp_table>;
+			power-domains = <&cpr>;
+			power-domain-names = "cpr";
 			#cooling-cells = <2>;
 		};
 
@@ -86,6 +200,10 @@
 			next-level-cache = <&L2_1>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc3>;
+			clocks = <&apcs1_mbox>;
+			operating-points-v2 = <&cluster1_opp_table>;
+			power-domains = <&cpr>;
+			power-domain-names = "cpr";
 			#cooling-cells = <2>;
 		};
 
@@ -96,6 +214,10 @@
 			next-level-cache = <&L2_0>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc4>;
+			clocks = <&apcs0>;
+			operating-points-v2 = <&cluster0_opp_table>;
+			power-domains = <&cpr>;
+			power-domain-names = "cpr";
 			#cooling-cells = <2>;
 			L2_0: l2-cache {
 				compatible = "cache";
@@ -111,6 +233,10 @@
 			next-level-cache = <&L2_0>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc5>;
+			clocks = <&apcs0>;
+			operating-points-v2 = <&cluster0_opp_table>;
+			power-domains = <&cpr>;
+			power-domain-names = "cpr";
 			#cooling-cells = <2>;
 		};
 
@@ -121,6 +247,10 @@
 			next-level-cache = <&L2_0>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc6>;
+			clocks = <&apcs0>;
+			operating-points-v2 = <&cluster0_opp_table>;
+			power-domains = <&cpr>;
+			power-domain-names = "cpr";
 			#cooling-cells = <2>;
 		};
 
@@ -131,6 +261,10 @@
 			next-level-cache = <&L2_0>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc7>;
+			clocks = <&apcs0>;
+			operating-points-v2 = <&cluster0_opp_table>;
+			power-domains = <&cpr>;
+			power-domain-names = "cpr";
 			#cooling-cells = <2>;
 		};
 
@@ -264,7 +398,7 @@
 
 		rpm {
 			interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
-			qcom,ipc = <&apcs 8 0>;
+			qcom,ipc = <&apcs1 8 0>;
 			qcom,smd-edge = <15>;
 
 			rpm_requests: rpm-requests {
@@ -380,8 +514,8 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		qcom,ipc-1 = <&apcs 8 13>;
-		qcom,ipc-3 = <&apcs 8 19>;
+		qcom,ipc-1 = <&apcs1 8 13>;
+		qcom,ipc-3 = <&apcs1 8 19>;
 
 		apps_smsm: apps@0 {
 			reg = <0>;
@@ -420,6 +554,65 @@
 
 			interconnects = <&bimc MASTER_AMPSS_M0 &pcnoc SLAVE_PRNG>;
 			interconnect-names = "cpu";
+		};
+
+		qfprom_cpr: qfprom_cpr@58000 {
+			compatible = "qcom,qfprom";
+			reg = <0x00058000 0x1000>;
+
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			cpr_efuse_init_voltage1: ivoltage1@dc {
+				reg = <0xdc 0x4>;
+				bits = <4 6>;
+			};
+
+			cpr_efuse_init_voltage2: ivoltage2@da {
+				reg = <0xda 0x4>;
+				bits = <2 6>;
+			};
+
+			cpr_efuse_init_voltage3: ivoltage3@d8 {
+				reg = <0xd8 0x4>;
+				bits = <0 6>;
+			};
+
+			cpr_efuse_quot1: quot1@dc {
+				reg = <0xdc 0x4>;
+				bits = <10 12>;
+			};
+
+			cpr_efuse_quot2: quot2@da {
+				reg = <0xda 0x4>;
+				bits = <2 12>;
+			};
+
+			cpr_efuse_quot3: quot3@d8 {
+				reg = <0xd8 0x4>;
+				bits = <2 12>;
+			};
+
+			cpr_efuse_ring1: ring1@de {
+				reg = <0xde 0x4>;
+				bits = <6 3>;
+			};
+
+			cpr_efuse_ring2: ring2@de {
+				reg = <0xde 0x4>;
+				bits = <6 3>;
+			};
+
+			cpr_efuse_ring3: ring3@de {
+				reg = <0xde 0x4>;
+				bits = <6 3>;
+			};
+
+			cpr_efuse_revision: revision@40 {
+				/* This info is missing. Not used neither. */
+				reg = <0x40 0x4>;
+				bits = <3 2>;
+			};
 		};
 
 		qfprom: qfprom@5c000 {
@@ -712,6 +905,8 @@
 			clocks = <&xo_board>, <&sleep_clk>;
 			#clock-cells = <1>;
 			#reset-cells = <1>;
+			power-domains = <&rpmpd MSM8939_VDDCX>;
+			power-domain-names = "dig";
 			#power-domain-cells = <1>;
 		};
 
@@ -759,8 +954,15 @@
 				clocks = <&gcc GCC_MDSS_AHB_CLK>,
 					 <&gcc GCC_MDSS_AXI_CLK>,
 					 <&gcc GCC_MDSS_MDP_CLK>,
-					 <&gcc GCC_MDSS_VSYNC_CLK>;
-				clock-names = "iface", "bus", "core", "vsync";
+					 <&gcc GCC_MDSS_VSYNC_CLK>,
+					 <&gcc GCC_MDP_TBU_CLK>,
+					 <&gcc GCC_MDP_RT_TBU_CLK>;
+				clock-names = "iface",
+					      "bus",
+					      "core",
+					      "vsync",
+					      "tbu",
+					      "tbu_rt";
 
 				iommus = <&apps_iommu 4>;
 
@@ -1043,7 +1245,7 @@
 				interrupts = <GIC_SPI 25 IRQ_TYPE_EDGE_RISING>;
 
 				qcom,smd-edge = <0>;
-				qcom,ipc = <&apcs 8 12>;
+				mboxes = <&apcs1_mbox 12>;
 				qcom,remote-pid = <1>;
 
 				label = "hexagon";
@@ -1372,7 +1574,7 @@
 		};
 
 		pronto: remoteproc@a21b000 {
-			compatible = "qcom,pronto-v2-pil", "qcom,pronto";
+			compatible = "qcom,pronto-v2-pd-pil", "qcom,pronto";
 			reg = <0x0a204000 0x2000>, <0x0a202000 0x1000>, <0x0a21b000 0x3000>;
 			reg-names = "ccu", "dxe", "pmu";
 
@@ -1385,7 +1587,9 @@
 					      <&wcnss_smp2p_in 3 IRQ_TYPE_EDGE_RISING>;
 			interrupt-names = "wdog", "fatal", "ready", "handover", "stop-ack";
 
-			vddmx-supply = <&pm8916_l3>;
+			power-domains = <&rpmpd MSM8939_VDDCX>,
+					<&rpmpd MSM8939_VDDMX_AO>;
+			power-domain-names = "vddcx", "vddmx";
 			vddpx-supply = <&pm8916_l7>;
 
 			qcom,state = <&wcnss_smp2p_out 0>;
@@ -1411,7 +1615,7 @@
 			smd-edge {
 				interrupts = <GIC_SPI 142 1>;
 
-				qcom,ipc = <&apcs 8 17>;
+				qcom,ipc = <&apcs1 8 17>;
 				qcom,smd-edge = <6>;
 				qcom,remote-pid = <4>;
 
@@ -1449,11 +1653,22 @@
 			interrupt-controller;
 		};
 
-		/* TODO: check address */
-		apcs: mailbox@b011000 {
-			compatible = "qcom,msm8916-apcs-kpss-global", "syscon";
+		apcs1: syscon@b011000 {
+			compatible = "syscon";
+			reg = <0x0b011000 0x1000>;
+		};
+
+		apcs1_mbox: mailbox@b011000 {
+			compatible = "qcom,msm8916-apcs-kpss-global";
 			reg = <0x0b011000 0x1000>;
 			#mbox-cells = <1>;
+			clocks = <&a53pll_c1>, <&gcc GPLL0_VOTE>, <&xo_board>;
+			clock-names = "pll", "aux", "ref";
+			#clock-cells = <0>;
+			clock-output-names = "a53mux_c1";
+			/* Set a nominal frequency on a53mux_cci */
+			assigned-clocks = <&apcs2>;
+			assigned-clock-rates = <297600000>;
 		};
 
 		l2c_pd_1: power-domain@b011000 {
@@ -1461,10 +1676,55 @@
 			reg = <0x0b011000 0x1000>;
 		};
 
+		a53pll_c1: clock@b016000 {
+			compatible = "qcom,msm8939-a53pll-c1";
+			reg = <0x0b016000 0x40>;
+			#clock-cells = <0>;
+			power-domains = <&rpmpd MSM8939_VDDCX_AO>;
+			power-domain-names = "dig";
+			dig-supply = <&pm8916_l7>;
+		};
+
 		watchdog@0b017000 {
 			compatible = "qcom,kpss-wdt";
 			reg = <0x0b017000 0x1000>;
 			clocks = <&sleep_clk>;
+		};
+
+		cpr: power-controller@b018000 {
+			compatible = "qcom,msm8939-cpr", "qcom,cpr";
+			reg = <0x0b018000 0x1000>;
+
+			interrupts = <GIC_SPI 15 IRQ_TYPE_EDGE_RISING>;
+			clocks = <&xo_board>;
+			clock-names = "ref";
+
+			power-domains = <&rpmpd MSM8939_VDDMX_AO>;
+			#power-domain-cells = <0>;
+
+			operating-points-v2 = <&cpr_opp_table>;
+			acc-syscon = <&tcsr>;
+
+			nvmem-cells = <&cpr_efuse_init_voltage1>,
+				<&cpr_efuse_init_voltage2>,
+				<&cpr_efuse_init_voltage3>,
+				<&cpr_efuse_quot1>,
+				<&cpr_efuse_quot2>,
+				<&cpr_efuse_quot3>,
+				<&cpr_efuse_ring1>,
+				<&cpr_efuse_ring2>,
+				<&cpr_efuse_ring3>,
+				<&cpr_efuse_revision>;
+			nvmem-cell-names = "cpr_init_voltage1",
+				"cpr_init_voltage2",
+				"cpr_init_voltage3",
+				"cpr_quotient1",
+				"cpr_quotient2",
+				"cpr_quotient3",
+				"cpr_ring_osc1",
+				"cpr_ring_osc2",
+				"cpr_ring_osc3",
+				"cpr_fuse_revision";
 		};
 
 		acc0: clock-controller@b088000 {
@@ -1487,9 +1747,28 @@
 			reg = <0x0b0b8000 0x1000>;
 		};
 
+		apcs0: mailbox@b111000 {
+			compatible = "qcom,msm8916-apcs-kpss-global", "syscon";
+			reg = <0x0b111000 0x1000>;
+			#mbox-cells = <1>;
+			clocks = <&a53pll_c0>, <&gcc GPLL0_VOTE>, <&xo_board>;
+			clock-names = "pll", "aux", "ref";
+			#clock-cells = <0>;
+			clock-output-names = "a53mux_c0";
+		};
+
 		l2c_pd_0: power-domain@b111000 {
 			compatible = "qcom,l2c-pd";
 			reg = <0x0b111000 0x1000>;
+		};
+
+		a53pll_c0: clock@b116000 {
+			compatible = "qcom,msm8939-a53pll-c0";
+			reg = <0x0b116000 0x40>;
+			#clock-cells = <0>;
+			power-domains = <&rpmpd MSM8939_VDDCX_AO>;
+			power-domain-names = "dig";
+			dig-supply = <&pm8916_l7>;
 		};
 
 		timer@b120000 {
@@ -1569,6 +1848,25 @@
 		acc7: clock-controller@b1b8000 {
 			compatible = "qcom,kpss-acc-v2";
 			reg = <0x0b1b8000 0x1000>;
+		};
+
+		a53pll_cci: clock@b1d0000 {
+			compatible = "qcom,msm8939-a53pll-cci";
+			reg = <0x0b1d0000 0x40>;
+			#clock-cells = <0>;
+			power-domains = <&rpmpd MSM8939_VDDCX_AO>;
+			power-domain-names = "dig";
+			dig-supply = <&pm8916_l7>;
+		};
+
+		apcs2: mailbox@b1d1000 {
+			compatible = "qcom,msm8916-apcs-kpss-global", "syscon";
+			reg = <0x0b1d1000 0x1000>;
+			#mbox-cells = <1>;
+			clocks = <&a53pll_cci>, <&gcc GPLL0_VOTE>, <&xo_board>;
+			clock-names = "pll", "aux", "ref";
+			#clock-cells = <0>;
+			clock-output-names = "a53mux_cci";
 		};
 	};
 

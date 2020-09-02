@@ -167,8 +167,33 @@
 
 &blsp1_i2c4 {
 	clock-frequency = <400000>;
+	status = "okay";
 
 	/* TODO: SMB1360 on 0x14 */
+
+	ncp6335d: ncp6335d-regulator@1c {
+		compatible = "onnn,ncp6335d-regulator";
+		reg = <0x1c>;
+
+		onnn,vsel = <0>;
+		onnn,slew-ns = <3333>;
+		onnn,step-size = <6250>;
+		onnn,min-slew-ns = <416>;
+		onnn,max-slew-ns = <3333>;
+		regulator-min-microvolt = <1050000>;
+		regulator-max-microvolt = <1350000>;
+		onnn,min-setpoint = <600000>;
+
+		pintrl-names = "default";
+		pinctrl-0 = <&ext_buck_vsel_default>;
+
+		onnn,vsel-gpio = <&tlmm 111 GPIO_ACTIVE_LOW>;
+		onnn,discharge-enable;
+		onnn,restore-reg;
+		onnn,set-en-always;
+		onnn,register-corruption-workaround;
+		regulator-always-on;
+	};
 };
 
 &blsp1_i2c5 {
@@ -194,6 +219,10 @@
 		enable-gpios = <&tlmm 20 GPIO_ACTIVE_HIGH>;
 		firmware-gpios = <&tlmm 120 GPIO_ACTIVE_HIGH>;
 	};
+};
+
+&cpr {
+	vdd-apc-supply = <&ncp6335d>;
 };
 
 &dsi0 {
@@ -397,6 +426,13 @@
 
 		drive-strength = <2>;
 		bias-disable;
+	};
+
+	ext_buck_vsel_default: ext-buck-vsel-default {
+		pins = "gpio111";
+		function = "gpio";
+
+		drive-strength = <2>;
 	};
 
 	gpio_key_default: gpio-key-default {
