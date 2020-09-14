@@ -733,6 +733,38 @@
 				bias-disable;
 			};
 
+			ts_reset_default: ts-reset-default {
+				pins = "gpio12";
+				function = "gpio";
+
+				driver-strength = <16>;
+				bias-pull-up;
+			};
+
+			ts_reset_sleep: ts-reset-sleep {
+				pins = "gpio12";
+				function = "gpio";
+
+				driver-strength = <2>;
+				bias-pull-down;
+			};
+
+			ts_int_default: ts-int-default {
+				pins = "gpio13";
+				function = "gpio";
+
+				driver-strength = <16>;
+				bias-pull-up;
+			};
+
+			ts_int_sleep: ts-int-sleep {
+				pins = "gpio13";
+				function = "gpio";
+
+				driver-strength = <2>;
+				bias-pull-down;
+			};
+
 			blsp1_i2c4_default: blsp1-i2c4-default {
 				pins = "gpio14", "gpio15";
 				function = "blsp_i2c4";
