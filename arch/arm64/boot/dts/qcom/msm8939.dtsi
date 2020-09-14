@@ -829,19 +829,27 @@
 				bias-disable;
 			};
 
-			usb_id_default: usb-id-default {
-				pins = "gpio110";
-				function = "gpio";
-
-				drive-strength = <8>;
-				bias-pull-up;
-			};
-
 			wcnss_default: wcnss-active {
 				pins = "gpio40", "gpio41", "gpio42", "gpio43", "gpio44";
 				function = "wcss_wlan";
 
 				drive-strength = <6>;
+				bias-pull-up;
+			};
+
+			smb_int_default: smb-int-default {
+				pins = "gpio62";
+				function = "gpio";
+
+				drive-strength = <2>;
+				bias-pull-up;
+			};
+
+			usb_id_default: usb-id-default {
+				pins = "gpio110";
+				function = "gpio";
+
+				drive-strength = <8>;
 				bias-pull-up;
 			};
 
