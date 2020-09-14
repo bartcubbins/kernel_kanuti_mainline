@@ -198,8 +198,59 @@
 
 &blsp1_i2c5 {
 	clock-frequency = <400000>;
+	status = "okay";
 
-	/* TODO: CYTTSP4 on 0x24 */
+	tsc@24 {
+		compatible = "cy,cyttsp4_i2c_adapter";
+		reg = <0x24>;
+
+		/* GPIO 38, high-to-low edge triggered */
+		interrupts = <13 0x2008>;
+		interrupt-parent = <&tlmm>;
+		cy,adapter_id = "cyttsp4_i2c_adapter";
+
+		pinctrl-names = "pmx_ts_active","pmx_ts_suspend";
+		pinctrl-0 = <&ts_int_default &ts_reset_default>;
+		pinctrl-1 = <&ts_int_sleep &ts_reset_sleep>;
+
+		vdd-supply = <&pm8916_l17>;
+		vcc_i2c-supply = <&pm8916_l6>;
+
+		cy,core {
+			cy,name = "cyttsp4_core";
+			cy,id = "main_ttsp_core";
+
+			gpios = <&tlmm 12 GPIO_ACTIVE_HIGH>, <&tlmm 13 GPIO_ACTIVE_HIGH>;
+
+			cy,irq_gpio = <13>;
+			cy,rst_gpio = <12>;
+
+			cy,mt {
+				cy,name = "cyttsp4_mt";
+
+				cy,inp_dev_name = "cyttsp4_mt";
+				/* CY_MT_FLAG_FLIP | CY_MT_FLAG_INV_X | CY_MT_FLAG_INV_Y */
+				cy,flags = <0x8>;
+				cy,abs =
+					/* ABS_MT_POSITION_X, CY_ABS_MIN_X, CY_ABS_MAX_X, 0, 0 */
+					<0x35 0 1080 0 0
+					/* ABS_MT_POSITION_Y, CY_ABS_MIN_Y, CY_ABS_MAX_Y, 0, 0 */
+					0x36 0 1920 0 0
+					/* ABS_MT_PRESSURE, CY_ABS_MIN_P, CY_ABS_MAX_P, 0, 0 */
+					0x3a 0 255 0 0
+					/* CY_IGNORE_VALUE, CY_ABS_MIN_W, CY_ABS_MAX_W, 0, 0 */
+					0xffff 0 255 0 0
+					/* ABS_MT_TRACKING_ID, CY_ABS_MIN_T, CY_ABS_MAX_T, 0, 0 */
+					0x39 0 15 0 0
+					/* ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0 */
+					0x30 0 255 0 0
+					/* ABS_MT_TOUCH_MINOR, 0, 255, 0, 0 */
+					0x31 0 255 0 0
+					/* ABS_MT_ORIENTATION, -128, 127, 0, 0 */
+					0x34 0xfffffed7 127 0 0>;
+			};
+		};
+	};
 
 	/* TODO: Some devices have CYTTSP5 on 0x34 instead of CYTTSP4 */
 };
