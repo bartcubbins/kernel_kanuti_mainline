@@ -79,14 +79,6 @@
 			ecc-size = <16>;
 		};
 	};
-
-	usb_id: usb-id {
-		compatible = "linux,extcon-usb-gpio";
-
-		id-gpio = <&tlmm 110 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&usb_id_default>;
-	};
 };
 
 &apps_iommu {
@@ -169,7 +161,41 @@
 	clock-frequency = <400000>;
 	status = "okay";
 
-	/* TODO: SMB1360 on 0x14 */
+	smb1360_otg_supply: smb1360-chg-fg@14 {
+		compatible = "qcom,smb1360-chg-fg";
+		reg = <0x14>;
+
+		interrupts-extended = <&tlmm 62 IRQ_TYPE_LEVEL_LOW>,
+				      <&tlmm 110 IRQ_TYPE_EDGE_BOTH>;
+		interrupt-names = "smb1360_stat_irq",
+				  "smb1360_usb_id_irq";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&smb_int_default>, <&usb_id_default>;
+
+		qcom,empty-soc-disabled;
+		qcom,chg-inhibit-disabled;
+		qcom,float-voltage-mv = <4350>;
+		qcom,iterm-ma = <100>;
+		qcom,recharge-thresh-mv = <200>;
+		qcom,fg-auto-recharge-soc = <99>;
+		qcom,thermal-mitigation = <1500 700 600 0>;
+		/* TODO: Disable OTG for now */
+		/* qcom,usb-id-gpio = <&tlmm 110 GPIO_ACTIVE_HIGH>; */
+
+		/* Battery-profile selection properties */
+		qcom,batt-profile-select;
+		qcom,smb1360-vadc = <&pm8916_vadc>;
+		qcom,batt-id-vref-uv = <1800000>;
+		qcom,batt-id-rpullup-kohm = <100>;
+		qcom,profile-a-rid-kohm = <324>;
+		qcom,profile-b-rid-kohm = <181>;
+		qcom,shdn-after-pwroff;
+		qcom,charging-timeout = <192>;
+
+		io-channels = <&pm8916_vadc VADC_LR_MUX2_BAT_ID>;
+		io-channel-names = "batt_id";
+	};
 
 	ncp6335d: ncp6335d-regulator@1c {
 		compatible = "onnn,ncp6335d-regulator";
@@ -312,9 +338,16 @@
 
 &otg {
 	dr_mode = "peripheral";
-	extcon = <&usb_id>, <&usb_id>;
+	extcon = <&smb1360_otg_supply>, <&smb1360_otg_supply>;
 
 	status = "okay";
+};
+
+&pm8916_vadc {
+	batt_id {
+		reg = <VADC_LR_MUX2_BAT_ID>;
+		qcom,ratiometric;
+	};
 };
 
 &pm8916_vib {
@@ -509,19 +542,11 @@
 		drive-strength = <2>;
 		bias-pull-down;
 	};
-
-	smb_int_default: smb-int-default {
-		pins = "gpio62";
-		function = "gpio";
-
-		drive-strength = <2>;
-		bias-pull-up;
-	};
 };
 
 &usb_hs_phy {
 	v1p8-supply = <&pm8916_l7>;
 	v3p3-supply = <&pm8916_l13>;
 
-	extcon = <&usb_id>;
+	extcon = <&smb1360_otg_supply>;
 };
