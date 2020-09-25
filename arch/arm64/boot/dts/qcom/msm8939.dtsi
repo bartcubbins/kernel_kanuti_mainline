@@ -845,6 +845,24 @@
 				bias-pull-up;
 			};
 
+			cdc_pdm_lines_default: pdm-lines-on {
+				pins = "gpio63", "gpio64", "gpio65",
+				       "gpio66", "gpio67", "gpio68";
+				function = "cdc_pdm0";
+
+				driver-strength = <8>;
+				bias-disable;
+			};
+
+			cdc_pdm_lines_sleep: pdm-lines-off {
+				pins = "gpio63", "gpio64", "gpio65",
+				       "gpio66", "gpio67", "gpio68";
+				function = "cdc_pdm0";
+
+				driver-strength = <2>;
+				bias-pull-down;
+			};
+
 			usb_id_default: usb-id-default {
 				pins = "gpio110";
 				function = "gpio";
@@ -1304,6 +1322,50 @@
 					};
 				};
 			};
+		};
+
+		lpass: lpass@7708000 {
+			compatible = "qcom,lpass-cpu-apq8016";
+			reg = <0x07708000 0x10000>;
+			reg-names = "lpass-lpaif";
+
+			interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "lpass-irq-lpaif";
+
+			clocks = <&gcc GCC_ULTAUDIO_AHBFABRIC_IXFABRIC_CLK>,
+				 <&gcc GCC_ULTAUDIO_PCNOC_MPORT_CLK>,
+				 <&gcc GCC_ULTAUDIO_PCNOC_SWAY_CLK>,
+				 <&gcc GCC_ULTAUDIO_LPAIF_PRI_I2S_CLK>,
+				 <&gcc GCC_ULTAUDIO_LPAIF_SEC_I2S_CLK>,
+				 <&gcc GCC_ULTAUDIO_LPAIF_SEC_I2S_CLK>,
+				 <&gcc GCC_ULTAUDIO_LPAIF_AUX_I2S_CLK>;
+
+			clock-names = "ahbix-clk",
+				      "pcnoc-mport-clk",
+				      "pcnoc-sway-clk",
+				      "mi2s-bit-clk0",
+				      "mi2s-bit-clk1",
+				      "mi2s-bit-clk2",
+				      "mi2s-bit-clk3";
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#sound-dai-cells = <1>;
+
+			status = "disabled";
+		};
+
+		lpass_codec: codec{
+			compatible = "qcom,msm8916-wcd-digital-codec";
+			reg = <0x0771c000 0x400>;
+
+			clocks = <&gcc GCC_ULTAUDIO_AHBFABRIC_IXFABRIC_CLK>,
+				 <&gcc GCC_CODEC_DIGCODEC_CLK>;
+			clock-names = "ahbix-clk", "mclk";
+
+			#sound-dai-cells = <1>;
+
+			status = "disabled";
 		};
 
 		sdhc_1: sdhci@7824900 {

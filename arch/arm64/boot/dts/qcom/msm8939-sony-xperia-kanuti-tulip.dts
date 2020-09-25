@@ -9,6 +9,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/leds/common.h>
+#include <dt-bindings/sound/apq8016-lpass.h>
 #include "msm8939.dtsi"
 #include "pm8916.dtsi"
 
@@ -336,6 +337,14 @@
 	data-lanes = <0 1 2 3>;
 };
 
+&lpass {
+	status = "okay";
+};
+
+&lpass_codec {
+	status = "okay";
+};
+
 &otg {
 	dr_mode = "peripheral";
 	extcon = <&smb1360_otg_supply>, <&smb1360_otg_supply>;
@@ -503,6 +512,48 @@
 	status = "okay";
 };
 
+&soc {
+	sound {
+		compatible = "qcom,apq8016-sbc-sndcard";
+		reg = <0x07702000 0x4>, <0x07702004 0x4>;
+		reg-names = "mic-iomux", "spkr-iomux";
+
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&cdc_pdm_lines_default>;
+		pinctrl-1 = <&cdc_pdm_lines_sleep>;
+
+		qcom,model = "sony-tulip";
+		qcom,audio-routing =
+			"AMIC1", "MIC BIAS External1",
+			"AMIC2", "MIC BIAS Internal2",
+			"AMIC3", "MIC BIAS External1";
+
+		internal-codec-playback-dai-link@0 {
+			link-name = "WCD";
+
+			cpu {
+				sound-dai = <&lpass MI2S_PRIMARY>;
+			};
+
+			codec {
+				sound-dai = <&lpass_codec 0>, <&wcd_codec 0>;
+			};
+		};
+
+		internal-codec-capture-dai-link@0 {
+			link-name = "WCD-Capture";
+
+			cpu {
+				sound-dai = <&lpass MI2S_TERTIARY>;
+			};
+
+			codec {
+				sound-dai = <&lpass_codec 1>, <&wcd_codec 1>;
+			};
+		};
+	};
+};
+
 &tlmm {
 	bma2x2_default: bma2x2-default {
 		pins = "gpio69";
@@ -549,4 +600,11 @@
 	v3p3-supply = <&pm8916_l13>;
 
 	extcon = <&smb1360_otg_supply>;
+};
+
+&wcd_codec {
+	qcom,hphl-jack-type-normally-open;
+
+	qcom,mbhc-vthreshold-low = <75 212 525 637 700>;
+	qcom,mbhc-vthreshold-high = <62 200 462 625 700>;
 };
