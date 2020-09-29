@@ -104,9 +104,6 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&bma2x2_default>;
 
-		mount-matrix = "1", "0", "0",
-			       "0", "-1", "0",
-			       "0", "0", "-1";
 	};
 
 	bmc150-magnetometer@12 {
