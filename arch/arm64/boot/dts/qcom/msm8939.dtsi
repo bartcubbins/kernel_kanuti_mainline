@@ -153,6 +153,8 @@
 			next-level-cache = <&L2_1>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc0>;
+			qcom,saw = <&saw0>;
+			cpu-idle-states = <&CPU_SPC>;
 			clocks = <&apcs1_mbox>;
 			operating-points-v2 = <&cluster1_opp_table>;
 			power-domains = <&cpr>;
@@ -172,6 +174,8 @@
 			next-level-cache = <&L2_1>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc1>;
+			qcom,saw = <&saw1>;
+			//cpu-idle-states = <&CPU_SPC>;
 			clocks = <&apcs1_mbox>;
 			operating-points-v2 = <&cluster1_opp_table>;
 			power-domains = <&cpr>;
@@ -186,6 +190,8 @@
 			next-level-cache = <&L2_1>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc2>;
+			qcom,saw = <&saw2>;
+			//cpu-idle-states = <&CPU_SPC>;
 			clocks = <&apcs1_mbox>;
 			operating-points-v2 = <&cluster1_opp_table>;
 			power-domains = <&cpr>;
@@ -200,6 +206,8 @@
 			next-level-cache = <&L2_1>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc3>;
+			qcom,saw = <&saw3>;
+			//cpu-idle-states = <&CPU_SPC>;
 			clocks = <&apcs1_mbox>;
 			operating-points-v2 = <&cluster1_opp_table>;
 			power-domains = <&cpr>;
@@ -214,6 +222,8 @@
 			next-level-cache = <&L2_0>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc4>;
+			qcom,saw = <&saw4>;
+			//cpu-idle-states = <&CPU_SPC>;
 			clocks = <&apcs0>;
 			operating-points-v2 = <&cluster0_opp_table>;
 			power-domains = <&cpr>;
@@ -233,6 +243,8 @@
 			next-level-cache = <&L2_0>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc5>;
+			qcom,saw = <&saw5>;
+			//cpu-idle-states = <&CPU_SPC>;
 			clocks = <&apcs0>;
 			operating-points-v2 = <&cluster0_opp_table>;
 			power-domains = <&cpr>;
@@ -247,6 +259,8 @@
 			next-level-cache = <&L2_0>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc6>;
+			qcom,saw = <&saw6>;
+			//cpu-idle-states = <&CPU_SPC>;
 			clocks = <&apcs0>;
 			operating-points-v2 = <&cluster0_opp_table>;
 			power-domains = <&cpr>;
@@ -261,6 +275,8 @@
 			next-level-cache = <&L2_0>;
 			enable-method = "qcom,kpss-acc-v2";
 			qcom,acc = <&acc7>;
+			qcom,saw = <&saw7>;
+			//cpu-idle-states = <&CPU_SPC>;
 			clocks = <&apcs0>;
 			operating-points-v2 = <&cluster0_opp_table>;
 			power-domains = <&cpr>;
@@ -315,6 +331,16 @@
 				 <&gcc GCC_CRYPTO_AHB_CLK>;
 			clock-names = "core", "bus", "iface";
 			#reset-cells = <1>;
+		};
+	};
+
+	idle-states {
+		CPU_SPC: spc {
+			compatible = "qcom,idle-state-spc";
+			entry-latency-us = <130>;
+			exit-latency-us = <150>;
+			min-residency-us = <2000>;
+			local-timer-stop;
 		};
 	};
 
@@ -1960,9 +1986,19 @@
 			reg = <0x0b088000 0x1000>;
 		};
 
+		saw0: power-controller@b089000 {
+			compatible = "qcom,msm8939-saw2-v3.0-cpu", "qcom,saw2";
+			reg = <0x0b089000 0x1000>;
+		};
+
 		acc1: clock-controller@b098000 {
 			compatible = "qcom,kpss-acc-v2";
 			reg = <0x0b098000 0x1000>;
+		};
+
+		saw1: power-controller@b099000 {
+			compatible = "qcom,msm8939-saw2-v3.0-cpu", "qcom,saw2";
+			reg = <0x0b099000 0x1000>;
 		};
 
 		acc2: clock-controller@b0a8000 {
@@ -1970,9 +2006,19 @@
 			reg = <0x0b0a8000 0x1000>;
 		};
 
+		saw2: power-controller@b0a9000 {
+			compatible = "qcom,msm8939-saw2-v3.0-cpu", "qcom,saw2";
+			reg = <0x0b0a9000 0x1000>;
+		};
+
 		acc3: clock-controller@b0b8000 {
 			compatible = "qcom,kpss-acc-v2";
 			reg = <0x0b0b8000 0x1000>;
+		};
+
+		saw3: power-controller@b0b9000 {
+			compatible = "qcom,msm8939-saw2-v3.0-cpu", "qcom,saw2";
+			reg = <0x0b0b9000 0x1000>;
 		};
 
 		apcs0: mailbox@b111000 {
@@ -2063,9 +2109,19 @@
 			reg = <0x0b188000 0x1000>;
 		};
 
+		saw4: power-controller@b189000 {
+			compatible = "qcom,msm8939-saw2-v3.0-cpu", "qcom,saw2";
+			reg = <0x0b189000 0x1000>;
+		};
+
 		acc5: clock-controller@b198000 {
 			compatible = "qcom,kpss-acc-v2";
 			reg = <0x0b198000 0x1000>;
+		};
+
+		saw5: power-controller@b199000 {
+			compatible = "qcom,msm8939-saw2-v3.0-cpu", "qcom,saw2";
+			reg = <0x0b199000 0x1000>;
 		};
 
 		acc6: clock-controller@b1a8000 {
@@ -2073,9 +2129,19 @@
 			reg = <0x0b1a8000 0x1000>;
 		};
 
+		saw6: power-controller@b1a9000 {
+			compatible = "qcom,msm8939-saw2-v3.0-cpu", "qcom,saw2";
+			reg = <0x0b1a9000 0x1000>;
+		};
+
 		acc7: clock-controller@b1b8000 {
 			compatible = "qcom,kpss-acc-v2";
 			reg = <0x0b1b8000 0x1000>;
+		};
+
+		saw7: power-controller@b1b9000 {
+			compatible = "qcom,msm8939-saw2-v3.0-cpu", "qcom,saw2";
+			reg = <0x0b1b9000 0x1000>;
 		};
 
 		a53pll_cci: clock@b1d0000 {

@@ -53,7 +53,7 @@ enum spm_reg {
 };
 
 struct spm_reg_data {
-	const u8 *reg_offset;
+	const uint32_t *reg_offset;
 	u32 spm_cfg;
 	u32 spm_dly;
 	u32 pmic_dly;
@@ -68,7 +68,27 @@ struct spm_driver_data {
 	const struct spm_reg_data *reg_data;
 };
 
-static const u8 spm_reg_offset_v2_1[SPM_REG_NR] = {
+static const uint32_t spm_reg_offset_v3_0[SPM_REG_NR] = {
+	[SPM_REG_CFG]		= 0x08,
+	[SPM_REG_SPM_CTL]	= 0x30,
+	[SPM_REG_DLY]		= 0x34,
+	[SPM_REG_PMIC_DATA_0]	= 0x40,
+	[SPM_REG_PMIC_DATA_1]	= 0x44,
+	[SPM_REG_SEQ_ENTRY]	= 0x400,
+};
+
+static const struct spm_reg_data spm_reg_8939_cpu = {
+	.reg_offset = spm_reg_offset_v3_0,
+	.spm_cfg = 0x01, // cluster0 = 0x01 | cluster1 = 0x1
+	.spm_dly = 0x3c102800,
+	.seq = { 0x60, 0x03, 0x60, 0x0b, 0x0F, 0x20, 0x50, 0x1B, 0x10, 0x80,
+		0x30, 0x90, 0x5B, 0x60, 0x50, 0x03, 0x60, 0x76, 0x76, 0x0B, 0x50,
+		0x1B, 0x94, 0x5B, 0x80, 0x10, 0x26, 0x30, 0x50, 0x0F },
+	.start_index[PM_SLEEP_MODE_STBY] = 0,
+	.start_index[PM_SLEEP_MODE_SPC] = 5,
+};
+
+static const uint32_t spm_reg_offset_v2_1[SPM_REG_NR] = {
 	[SPM_REG_CFG]		= 0x08,
 	[SPM_REG_SPM_CTL]	= 0x30,
 	[SPM_REG_DLY]		= 0x34,
@@ -87,7 +107,7 @@ static const struct spm_reg_data spm_reg_8974_8084_cpu  = {
 	.start_index[PM_SLEEP_MODE_SPC] = 3,
 };
 
-static const u8 spm_reg_offset_v1_1[SPM_REG_NR] = {
+static const uint32_t spm_reg_offset_v1_1[SPM_REG_NR] = {
 	[SPM_REG_CFG]		= 0x08,
 	[SPM_REG_SPM_CTL]	= 0x20,
 	[SPM_REG_PMIC_DLY]	= 0x24,
@@ -226,7 +246,7 @@ static int spm_cpuidle_init(struct cpuidle_driver *drv, int cpu)
 		return ret ? : -ENODEV;
 
 	/* We have atleast one power down mode */
-	return qcom_scm_set_warm_boot_addr(cpu_resume_arm, drv->cpumask);
+	return qcom_scm_set_warm_boot_addr(cpu_resume, drv->cpumask);
 }
 
 static struct spm_driver_data *spm_get_drv(struct platform_device *pdev,
@@ -259,6 +279,8 @@ static struct spm_driver_data *spm_get_drv(struct platform_device *pdev,
 }
 
 static const struct of_device_id spm_match_table[] = {
+	{ .compatible = "qcom,msm8939-saw2-v3.0-cpu",
+	  .data = &spm_reg_8939_cpu },
 	{ .compatible = "qcom,msm8974-saw2-v2.1-cpu",
 	  .data = &spm_reg_8974_8084_cpu },
 	{ .compatible = "qcom,apq8084-saw2-v2.1-cpu",
