@@ -9,7 +9,6 @@
 #include <linux/types.h>
 #include <linux/clk.h>
 #include <linux/of.h>
-#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <sound/soc.h>
@@ -308,8 +307,6 @@ struct pm8916_wcd_analog_priv {
 	unsigned int micbias1_cap_mode;
 	unsigned int micbias2_cap_mode;
 	unsigned int micbias_mv;
-	/* External supply for speaker */
-	int vdd_spkr_gpio;
 };
 
 static const char *const adc2_mux_text[] = { "ZERO", "INP2", "INP3" };
@@ -630,14 +627,9 @@ static int pm8916_wcd_analog_enable_spk_pa(struct snd_soc_dapm_widget *w,
 					    int event)
 {
 	struct snd_soc_component *component = snd_soc_dapm_to_component(w->dapm);
-	struct pm8916_wcd_analog_priv *priv = snd_soc_component_get_drvdata(component);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		/* Enable external power supply for speaker */
-		if (priv->vdd_spkr_gpio)
-			gpio_direction_output(priv->vdd_spkr_gpio, 1);
-
 		snd_soc_component_update_bits(component, CDC_A_SPKR_PWRSTG_CTL,
 				    SPKR_PWRSTG_CTL_DAC_EN_MASK |
 				    SPKR_PWRSTG_CTL_BBM_MASK |
@@ -661,10 +653,6 @@ static int pm8916_wcd_analog_enable_spk_pa(struct snd_soc_dapm_widget *w,
 				    SPKR_DRV_CLASSD_PA_EN_ENABLE);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
-		/* Disable external power supply for speaker */
-		if (priv->vdd_spkr_gpio)
-			gpio_direction_output(priv->vdd_spkr_gpio, 0);
-
 		snd_soc_component_update_bits(component, CDC_A_SPKR_PWRSTG_CTL,
 				    SPKR_PWRSTG_CTL_DAC_EN_MASK|
 				    SPKR_PWRSTG_CTL_BBM_MASK |
@@ -1192,10 +1180,6 @@ static int pm8916_wcd_analog_parse_dt(struct device *dev,
 		dev_err(dev,
 			"DT property missing, MBHC btn detection disabled\n");
 
-	priv->vdd_spkr_gpio = of_get_named_gpio(dev->of_node,
-						  "qcom,vdd-spkr-gpio", 0);
-	if (!gpio_is_valid(priv->vdd_spkr_gpio))
-		priv->vdd_spkr_gpio = -EINVAL;
 
 	return 0;
 }

@@ -52,8 +52,6 @@ Optional Properties:
 - qcom,micbias2-ext-cap: boolean, present if micbias2 has external capacitor
 			 connected.
 
-- qcom,vdd-spkr-gpio: GPIO which controls PA for VDD speaker
-
 Example:
 
 spmi_bus {
