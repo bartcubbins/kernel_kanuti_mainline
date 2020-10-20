@@ -565,7 +565,7 @@ static const struct parent_map gcc_xo_gpll1_epi2s_emclk_sleep_map[] = {
 
 static const struct clk_parent_data gcc_xo_gpll1_epi2s_emclk_sleep_parent_data[] = {
 	{ .fw_name = "xo" },
-	{ .hw = &gpll0_vote.hw },
+	{ .hw = &gpll1_vote.hw },
 	{ .fw_name = "ext_pri_i2s", .name = "ext_pri_i2s" },
 	{ .fw_name = "ext_mclk", .name = "ext_mclk" },
 	{ .fw_name = "sleep_clk", .name = "sleep_clk" },
@@ -638,11 +638,11 @@ static const struct clk_parent_data gcc_xo_gpll6_gpll0a_parent_data[] = {
 static struct clk_rcg2 pcnoc_bfdcd_clk_src = {
 	.cmd_rcgr = 0x27000,
 	.hid_width = 5,
-	.parent_map = gcc_xo_gpll0_map,
+	.parent_map = gcc_xo_gpll0_bimc_map,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "pcnoc_bfdcd_clk_src",
-		.parent_data = gcc_xo_gpll0_parent_data,
-		.num_parents = 2,
+		.parent_data = gcc_xo_gpll0_bimc_parent_data,
+		.num_parents = 3,
 		.ops = &clk_rcg2_ops,
 	},
 };
@@ -650,10 +650,10 @@ static struct clk_rcg2 pcnoc_bfdcd_clk_src = {
 static struct clk_rcg2 system_noc_bfdcd_clk_src = {
 	.cmd_rcgr = 0x26004,
 	.hid_width = 5,
-	.parent_map = gcc_xo_gpll0_gpll6a_map,
+	.parent_map = gcc_xo_gpll0_bimc_map,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "system_noc_bfdcd_clk_src",
-		.parent_data = gcc_xo_gpll0_gpll6a_parent_data,
+		.parent_data = gcc_xo_gpll0_bimc_parent_data,
 		.num_parents = 3,
 		.ops = &clk_rcg2_ops,
 	},
