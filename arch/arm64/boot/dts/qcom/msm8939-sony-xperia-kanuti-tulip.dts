@@ -80,6 +80,12 @@
 			ecc-size = <16>;
 		};
 	};
+
+	amp: analog-amplifier {
+		compatible = "simple-audio-amplifier";
+
+		enable-gpios = <&tlmm 49 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &apps_iommu {
@@ -527,6 +533,8 @@
 			"AMIC1", "MIC BIAS External1",
 			"AMIC2", "MIC BIAS Internal2",
 			"AMIC3", "MIC BIAS External1";
+
+		aux-devs = <&amp>;
 
 		internal-codec-playback-dai-link@0 {
 			link-name = "WCD";
