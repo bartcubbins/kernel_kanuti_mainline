@@ -604,7 +604,6 @@
 
 &wcd_codec {
 	qcom,hphl-jack-type-normally-open;
-	qcom,vdd-spkr-gpio = <&tlmm 49 GPIO_ACTIVE_HIGH>;
 
 	qcom,mbhc-vthreshold-low = <75 212 525 637 700>;
 	qcom,mbhc-vthreshold-high = <62 200 462 625 700>;
